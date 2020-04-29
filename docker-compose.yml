@@ -1,0 +1,14 @@
+version: "3.4"
+
+services:
+  db:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: magion
+      MYSQL_USER: magion
+      MYSQL_PASSWORD: magion
+      MYSQL_ROOT_PASSWORD: magion
+    volumes:
+      - ./containers/mysql/conf.d:/etc/mysql/conf.d
