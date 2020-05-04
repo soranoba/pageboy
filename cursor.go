@@ -24,13 +24,16 @@ type Cursor struct {
 }
 
 func init() {
-	gorm.DefaultCallback.Query().Before("gorm:query").Register("magion:before_query", handleBeforeQuery)
-	gorm.DefaultCallback.Query().After("gorm:query").Register("magion:after_query", handleAfterQuery)
-	gorm.DefaultCallback.Query().Register("magion:handle_query", handleQuery)
+	gorm.DefaultCallback.Query().Before("gorm:query").
+		Register("magion:cursor:before_query", cursorHandleBeforeQuery)
+	gorm.DefaultCallback.Query().After("gorm:query").
+		Register("magion:cursor:after_query", cursorHandleAfterQuery)
+	gorm.DefaultCallback.Query().
+		Register("magion:cursor:handle_query", cursorHandleQuery)
 }
 
 // Validate returns true when the Cursor is valid. Otherwise, it returns false.
-// If you execute Paging with an invalid value, panic may occur.
+// If you execute Paginate with an invalid value, panic may occur.
 func (cursor *Cursor) Validate() error {
 	if cursor.Before != "" && cursor.After != "" {
 		return errors.New("Both of before and after cannot be specified")
@@ -161,32 +164,36 @@ func ParseCursorString(str string) (time.Time, []interface{}) {
 	return t, args
 }
 
-func getCursor(scope *gorm.Scope) *Cursor {
+func getCursor(scope *gorm.Scope) (*Cursor, bool) {
 	value, ok := scope.Get("magion:cursor")
 	if !ok {
-		panic("")
+		return nil, false
 	}
 	cursor, ok := value.(*Cursor)
 	if !ok {
-		panic("")
+		return nil, false
 	}
-	return cursor
+	return cursor, true
 }
 
-func getColumns(scope *gorm.Scope) []string {
+func getColumns(scope *gorm.Scope) ([]string, bool) {
 	value, ok := scope.Get("magion:columns")
 	if !ok {
-		panic("")
+		return nil, false
 	}
 	columns, ok := value.([]string)
 	if !ok {
-		panic("")
+		return nil, false
 	}
-	return columns
+	return columns, true
 }
 
-func handleBeforeQuery(scope *gorm.Scope) {
-	cursor := getCursor(scope)
+func cursorHandleBeforeQuery(scope *gorm.Scope) {
+	cursor, ok := getCursor(scope)
+	if !ok {
+		return
+	}
+
 	re := regexp.MustCompile(`LIMIT\s+([0-9]+)`)
 
 	matches := re.FindStringSubmatch(scope.DB().NewScope(scope.DB().Value).CombinedConditionSql())
@@ -204,8 +211,12 @@ func handleBeforeQuery(scope *gorm.Scope) {
 	cursor.limit = -1
 }
 
-func handleAfterQuery(scope *gorm.Scope) {
-	cursor := getCursor(scope)
+func cursorHandleAfterQuery(scope *gorm.Scope) {
+	cursor, ok := getCursor(scope)
+	if !ok {
+		return
+	}
+
 	cursor.hasBefore = false
 	if cursor.limit == -1 {
 		return
@@ -232,9 +243,16 @@ func handleAfterQuery(scope *gorm.Scope) {
 	}
 }
 
-func handleQuery(scope *gorm.Scope) {
-	cursor := getCursor(scope)
-	columns := getColumns(scope)
+func cursorHandleQuery(scope *gorm.Scope) {
+	cursor, ok := getCursor(scope)
+	if !ok {
+		return
+	}
+	columns, ok := getColumns(scope)
+	if !ok {
+		return
+	}
+
 	cursor.nextBefore = nil
 	cursor.nextAfter = nil
 

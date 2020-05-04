@@ -89,7 +89,7 @@ func TestCursorValidate(t *testing.T) {
 	assertNoError(t, cursor.Validate())
 }
 
-func TestCursorPaging(t *testing.T) {
+func TestCursorPaginate(t *testing.T) {
 	db := openDB()
 	assertNoError(t, db.DropTableIfExists(&cursorModel{}).Error)
 	assertNoError(t, db.AutoMigrate(&cursorModel{}).Error)
