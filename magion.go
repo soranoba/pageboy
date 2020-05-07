@@ -46,7 +46,14 @@ func CompositeSortScopeFunc(compareStr string, columns ...string) func(values ..
 
 			for i, column := range columns[:length] {
 				column = toSnake(column)
-				queries = append(queries, fmt.Sprintf("(%s%s %s ?)", eqQuery, column, compareStr))
+				switch compareStr {
+				case "<":
+					queries = append(queries, fmt.Sprintf("(%s(%s IS NULL OR %s %s ?))", eqQuery, column, column, compareStr))
+				case ">":
+					queries = append(queries, fmt.Sprintf("(%s%s %s ?)", eqQuery, column, compareStr))
+				default:
+					panic("Unsupported compareStr")
+				}
 				queryValues = append(queryValues, values[:i+1]...)
 				eqQuery += fmt.Sprintf("%s = ? AND ", column)
 			}
@@ -55,9 +62,10 @@ func CompositeSortScopeFunc(compareStr string, columns ...string) func(values ..
 	}
 }
 
-func unixToTime(unix float64) time.Time {
+func unixToTime(unix float64) *time.Time {
 	sec, decimal := math.Modf(unix)
-	return time.Unix(int64(sec), int64(decimal*1e9))
+	t := time.Unix(int64(sec), int64(decimal*1e9))
+	return &t
 }
 
 func toSnake(str string) string {

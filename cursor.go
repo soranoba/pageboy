@@ -108,11 +108,15 @@ func (cursor *Cursor) Paginate(timeColumn string, columns ...string) func(db *go
 }
 
 // FormatCursorString returns a string for Cursor from time and integers.
-func FormatCursorString(t time.Time, args ...interface{}) string {
+func FormatCursorString(t *time.Time, args ...interface{}) string {
+	var str string
+
 	// time
-	str := strconv.FormatInt(t.Unix(), 10) + "." + strconv.Itoa(t.Nanosecond())
-	str = strings.TrimRight(str, "0")
-	str = strings.TrimRight(str, ".")
+	if t != nil {
+		str = strconv.FormatInt(t.Unix(), 10) + "." + strconv.Itoa(t.Nanosecond())
+		str = strings.TrimRight(str, "0")
+		str = strings.TrimRight(str, ".")
+	}
 
 	// args
 	var i64 int64
@@ -122,6 +126,9 @@ func FormatCursorString(t time.Time, args ...interface{}) string {
 
 	for _, arg := range args {
 		str += "_" + (func() string {
+			if arg == nil {
+				return ""
+			}
 			v := reflect.Indirect(reflect.ValueOf(arg))
 			if v.Type().ConvertibleTo(i64t) {
 				return strconv.FormatInt(v.Convert(i64t).Interface().(int64), 10)
@@ -154,21 +161,29 @@ func ValidateCursorString(str string) bool {
 }
 
 // ParseCursorString parses a string for cursor to a time and integers.
-func ParseCursorString(str string) (time.Time, []interface{}) {
+func ParseCursorString(str string) (*time.Time, []interface{}) {
 	parts := strings.Split(str, "_")
 
 	if len(parts) == 0 {
 		panic("invalid cursor")
 	}
 
-	unix, err := strconv.ParseFloat(parts[0], 64)
-	if err != nil {
-		panic("invalid cursor")
-	}
-	t := unixToTime(unix)
+	t := (func() *time.Time {
+		if parts[0] == "" {
+			return nil
+		}
+		unix, err := strconv.ParseFloat(parts[0], 64)
+		if err != nil {
+			panic("invalid cursor")
+		}
+		return unixToTime(unix)
+	})()
 	args := make([]interface{}, len(parts)-1)
 
 	for i, part := range parts[1:] {
+		if part == "" {
+			continue
+		}
 		v, err := strconv.ParseInt(part, 10, 64)
 		if err != nil {
 			panic("invalid cursor")
@@ -241,6 +256,7 @@ func cursorHandleAfterQuery(scope *gorm.Scope) {
 	if !(results.Kind() == reflect.Array || results.Kind() == reflect.Slice) {
 		return
 	}
+
 	if cursor.limit+1 == int64(results.Len()) {
 		cursor.hasBefore = true
 		results.Set(results.Slice(0, results.Len()-1))
@@ -306,20 +322,36 @@ func getCursorStringFromColumns(value reflect.Value, columns ...string) *string 
 	}
 
 	timeValue := value.FieldByName(columns[0])
-	timeValue = reflect.Indirect(timeValue)
-	if !(timeValue.Kind() == reflect.Struct && timeValue.CanInterface()) {
+	// the field does not found
+	if timeValue == (reflect.Value{}) {
 		return nil
 	}
 
-	t, ok := timeValue.Interface().(time.Time)
-	if !ok {
+	t := new(time.Time)
+	// the type of the filed is not time
+	if !(timeValue.Type() == reflect.TypeOf(t) ||
+		reflect.PtrTo(timeValue.Type()) == reflect.TypeOf(t)) {
 		return nil
+	}
+
+	if !timeValue.CanInterface() {
+		panic("timeValue can not interface")
+	}
+
+	if timeValue.Kind() == reflect.Ptr {
+		t = timeValue.Interface().(*time.Time)
+	} else {
+		*t = timeValue.Interface().(time.Time)
 	}
 
 	args := make([]interface{}, len(columns)-1)
 	for i, column := range columns[1:] {
 		argValue := value.FieldByName(column)
-		args[i] = argValue.Interface()
+		if argValue.CanInterface() {
+			args[i] = argValue.Interface()
+		} else {
+			args[i] = nil
+		}
 	}
 
 	str := FormatCursorString(t, args...)

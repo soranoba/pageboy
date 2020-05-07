@@ -21,7 +21,7 @@ func TestUnixToTime(t *testing.T) {
 	ti, err := time.Parse(format, "2020-04-01T02:03:04.250")
 	assertNoError(t, err)
 
-	assertEqual(t, unixToTime(1585706584.25), ti.Local())
+	assertEqual(t, *unixToTime(1585706584.25), ti.Local())
 }
 
 func TestToSnake(t *testing.T) {
