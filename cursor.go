@@ -1,4 +1,4 @@
-package magion
+package pageboy
 
 import (
 	"errors"
@@ -33,11 +33,11 @@ type Cursor struct {
 
 func init() {
 	gorm.DefaultCallback.Query().Before("gorm:query").
-		Register("magion:cursor:before_query", cursorHandleBeforeQuery)
+		Register("pageboy:cursor:before_query", cursorHandleBeforeQuery)
 	gorm.DefaultCallback.Query().After("gorm:query").
-		Register("magion:cursor:after_query", cursorHandleAfterQuery)
+		Register("pageboy:cursor:after_query", cursorHandleAfterQuery)
 	gorm.DefaultCallback.Query().
-		Register("magion:cursor:handle_query", cursorHandleQuery)
+		Register("pageboy:cursor:handle_query", cursorHandleQuery)
 }
 
 // Validate returns true when the Cursor is valid. Otherwise, it returns false.
@@ -80,8 +80,8 @@ func (cursor *Cursor) Paginate(timeColumn string, columns ...string) func(db *go
 
 	return func(db *gorm.DB) *gorm.DB {
 		db = db.New().
-			InstantSet("magion:columns", columns).
-			InstantSet("magion:cursor", cursor)
+			InstantSet("pageboy:columns", columns).
+			InstantSet("pageboy:cursor", cursor)
 
 		db = (func() *gorm.DB {
 			if cursor.Before == "" && cursor.After == "" {
@@ -195,7 +195,7 @@ func ParseCursorString(str string) (*time.Time, []interface{}) {
 }
 
 func getCursor(scope *gorm.Scope) (*Cursor, bool) {
-	value, ok := scope.Get("magion:cursor")
+	value, ok := scope.Get("pageboy:cursor")
 	if !ok {
 		return nil, false
 	}
@@ -207,7 +207,7 @@ func getCursor(scope *gorm.Scope) (*Cursor, bool) {
 }
 
 func getColumns(scope *gorm.Scope) ([]string, bool) {
-	value, ok := scope.Get("magion:columns")
+	value, ok := scope.Get("pageboy:columns")
 	if !ok {
 		return nil, false
 	}

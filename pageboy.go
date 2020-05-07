@@ -1,4 +1,4 @@
-package magion
+package pageboy
 
 import (
 	"fmt"

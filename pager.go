@@ -1,4 +1,4 @@
-package magion
+package pageboy
 
 import (
 	"errors"
@@ -25,7 +25,7 @@ type PagerSummary struct {
 
 func init() {
 	gorm.DefaultCallback.Query().Before("gorm:query").
-		Register("magion:pager:before_query", pagerHandleBeforeQuery)
+		Register("pageboy:pager:before_query", pagerHandleBeforeQuery)
 }
 
 // NewPager returns a default pager.
@@ -66,13 +66,13 @@ func (pager *Pager) Validate() error {
 //
 func (pager *Pager) Paginate() func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
-		db = db.New().Set("magion:pager", pager)
+		db = db.New().Set("pageboy:pager", pager)
 		return db.Offset((pager.Page - 1) * pager.PerPage).Limit(pager.PerPage)
 	}
 }
 
 func pagerHandleBeforeQuery(scope *gorm.Scope) {
-	value, ok := scope.Get("magion:pager")
+	value, ok := scope.Get("pageboy:pager")
 	if !ok {
 		return
 	}

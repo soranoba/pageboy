@@ -1,4 +1,4 @@
-package magion
+package pageboy
 
 import (
 	"fmt"
@@ -35,7 +35,7 @@ func openDB() *gorm.DB {
 		"mysql",
 		fmt.Sprintf(
 			"%s:%s@(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-			"magion", "magion", "127.0.0.1", 3306, "magion",
+			"pageboy", "pageboy", "127.0.0.1", 3306, "pageboy",
 		),
 	)
 	if err != nil {

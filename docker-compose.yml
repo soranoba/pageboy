@@ -6,9 +6,9 @@ services:
     ports:
       - "3306:3306"
     environment:
-      MYSQL_DATABASE: magion
-      MYSQL_USER: magion
-      MYSQL_PASSWORD: magion
-      MYSQL_ROOT_PASSWORD: magion
+      MYSQL_DATABASE: pageboy
+      MYSQL_USER: pageboy
+      MYSQL_PASSWORD: pageboy
+      MYSQL_ROOT_PASSWORD: pageboy
     volumes:
       - ./containers/mysql/conf.d:/etc/mysql/conf.d
