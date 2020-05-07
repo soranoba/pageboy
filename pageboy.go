@@ -48,9 +48,11 @@ func CompositeSortScopeFunc(compareStr string, columns ...string) func(values ..
 				column = toSnake(column)
 				switch compareStr {
 				case "<":
-					queries = append(queries, fmt.Sprintf("(%s(%s IS NULL OR %s %s ?))", eqQuery, column, column, compareStr))
+					query := fmt.Sprintf("(%s(%s IS NULL OR %s %s ?))", eqQuery, column, column, compareStr)
+					queries = append(queries, query)
 				case ">":
-					queries = append(queries, fmt.Sprintf("(%s%s %s ?)", eqQuery, column, compareStr))
+					query := fmt.Sprintf("(%s%s %s ?)", eqQuery, column, compareStr)
+					queries = append(queries, query)
 				default:
 					panic("Unsupported compareStr")
 				}
