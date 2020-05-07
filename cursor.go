@@ -13,9 +13,17 @@ import (
 )
 
 // Cursor can to get a specific range of records from DB in time order.
+//
+// When limit is smaller than or equal to 0, the validation will fail.
+// You should set the initial values and then read it from query or json.
+//
+//   cursor := &Cursor{Limit: 10}
+//   ctx.Bind(cursor)
+//
 type Cursor struct {
 	Before string `json:"before" query:"before"`
 	After  string `json:"after" query:"after"`
+	Limit  int    `json:"limit" query:"limit"`
 
 	nextBefore *string
 	nextAfter  *string
@@ -44,6 +52,9 @@ func (cursor *Cursor) Validate() error {
 	if cursor.After != "" && !ValidateCursorString(cursor.After) {
 		return errors.New("The after parameter is invalid")
 	}
+	if cursor.Limit < 1 {
+		return errors.New("The limit parameter is invalid")
+	}
 
 	return nil
 }
@@ -64,31 +75,35 @@ func (cursor *Cursor) GetNextBefore() *string {
 //
 //   db.Scopes(cursor.Paginate("CreatedAt", "ID")).Find(&models)
 //
-func (cursor *Cursor) Paginate(columns ...string) func(db *gorm.DB) *gorm.DB {
-	assert(len(columns) > 0, "length of columns must be greater than 0")
+func (cursor *Cursor) Paginate(timeColumn string, columns ...string) func(db *gorm.DB) *gorm.DB {
+	columns = append([]string{timeColumn}, columns...)
 
 	return func(db *gorm.DB) *gorm.DB {
 		db = db.New().
 			InstantSet("magion:columns", columns).
 			InstantSet("magion:cursor", cursor)
 
-		if cursor.Before == "" && cursor.After == "" {
-			return db.Order(CompositeOrder("DESC", columns...))
-		} else if cursor.Before != "" {
-			t, args := ParseCursorString(cursor.Before)
-			args = append([]interface{}{t}, args...)
-			return db.
-				Scopes(CompositeSortScopeFunc("<", columns...)(args...)).
-				Order(CompositeOrder("DESC", columns...))
-		} else if cursor.After != "" {
-			t, args := ParseCursorString(cursor.After)
-			args = append([]interface{}{t}, args...)
-			return db.
-				Scopes(CompositeSortScopeFunc(">", columns...)(args...)).
-				Order(CompositeOrder("ASC", columns...))
-		} else {
-			panic("invalid cursor")
-		}
+		db = (func() *gorm.DB {
+			if cursor.Before == "" && cursor.After == "" {
+				return db.Order(CompositeOrder("DESC", columns...))
+			} else if cursor.Before != "" {
+				t, args := ParseCursorString(cursor.Before)
+				args = append([]interface{}{t}, args...)
+				return db.
+					Scopes(CompositeSortScopeFunc("<", columns...)(args...)).
+					Order(CompositeOrder("DESC", columns...))
+			} else if cursor.After != "" {
+				t, args := ParseCursorString(cursor.After)
+				args = append([]interface{}{t}, args...)
+				return db.
+					Scopes(CompositeSortScopeFunc(">", columns...)(args...)).
+					Order(CompositeOrder("ASC", columns...))
+			} else {
+				panic("invalid cursor")
+			}
+		})()
+
+		return db.Limit(cursor.Limit)
 	}
 }
 

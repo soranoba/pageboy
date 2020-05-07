@@ -73,20 +73,26 @@ func TestParseCursorString(t *testing.T) {
 }
 
 func TestCursorValidate(t *testing.T) {
-	cursor := &Cursor{Before: "1585706584", After: "1585706584"}
+	cursor := &Cursor{Before: "1585706584", After: "1585706584", Limit: 10}
 	assertError(t, cursor.Validate())
 
-	cursor = &Cursor{Before: "aaa", After: ""}
+	cursor = &Cursor{Before: "aaa", After: "", Limit: 10}
 	assertError(t, cursor.Validate())
 
-	cursor = &Cursor{Before: "", After: "aaa"}
+	cursor = &Cursor{Before: "", After: "aaa", Limit: 10}
 	assertError(t, cursor.Validate())
 
-	cursor = &Cursor{Before: "1585706584.25_20", After: ""}
+	cursor = &Cursor{Before: "1585706584.25_20", After: "", Limit: 10}
 	assertNoError(t, cursor.Validate())
 
-	cursor = &Cursor{Before: "", After: "1585706584.25_20"}
-	assertNoError(t, cursor.Validate())
+	cursor = &Cursor{Before: "", After: "1585706584.25_20", Limit: 10}
+	assertError(t, cursor.Validate())
+
+	cursor = &Cursor{Before: "1585706584", After: "1585706584"}
+	assertError(t, cursor.Validate())
+
+	cursor = &Cursor{Before: "1585706584", After: "1585706584", Limit: -1}
+	assertError(t, cursor.Validate())
 }
 
 func TestCursorPaginate(t *testing.T) {
@@ -129,8 +135,10 @@ func TestCursorPaginate(t *testing.T) {
 	assertNoError(t, db.Create(&model4).Error)
 
 	var models []*cursorModel
-	cursor := &Cursor{}
-	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID")).Limit(1).Find(&models).Error)
+	cursor := &Cursor{
+		Limit: 1,
+	}
+	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID")).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model4.ID)
 	assertEqual(t, *cursor.GetNextAfter(), FormatCursorString(models[0].CreatedAt, models[0].ID))
@@ -138,6 +146,7 @@ func TestCursorPaginate(t *testing.T) {
 
 	cursor = &Cursor{
 		Before: *cursor.GetNextBefore(),
+		Limit:  1, // will be overwritten
 	}
 	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID")).Limit(2).Find(&models).Error)
 	assertEqual(t, len(models), 2)
@@ -148,8 +157,9 @@ func TestCursorPaginate(t *testing.T) {
 
 	cursor = &Cursor{
 		Before: *cursor.GetNextBefore(),
+		Limit:  1,
 	}
-	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID")).Limit(1).Find(&models).Error)
+	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID")).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model1.ID)
 	assertEqual(t, *cursor.GetNextAfter(), FormatCursorString(models[0].CreatedAt, models[0].ID))
@@ -157,8 +167,9 @@ func TestCursorPaginate(t *testing.T) {
 
 	cursor = &Cursor{
 		After: *cursor.GetNextAfter(),
+		Limit: 2,
 	}
-	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID")).Limit(2).Find(&models).Error)
+	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID")).Find(&models).Error)
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model3.ID)
 	assertEqual(t, models[1].ID, model2.ID)
@@ -167,8 +178,9 @@ func TestCursorPaginate(t *testing.T) {
 
 	cursor = &Cursor{
 		After: *cursor.GetNextAfter(),
+		Limit: 2,
 	}
-	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID")).Limit(2).Find(&models).Error)
+	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID")).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model4.ID)
 	assertEqual(t, *cursor.GetNextAfter(), FormatCursorString(models[0].CreatedAt, models[0].ID))
