@@ -16,6 +16,13 @@ const (
 	DESC Order = "DESC"
 )
 
+type Comparator string
+
+const (
+	GreaterThan Comparator = ">"
+	LessThan    Comparator = "<"
+)
+
 // CompositeOrder returns order string to specifies the order of the composite key.
 //
 // Examples:
@@ -35,9 +42,9 @@ func CompositeOrder(order Order, columns ...string) string {
 //
 // Examples:
 //
-//   CompositeSortScopeFunc(">", "CreatedAt", "ID")(time, id)
+//   CompositeSortScopeFunc(GreaterThan, "CreatedAt", "ID")(time, id)
 //
-func CompositeSortScopeFunc(compareStr string, columns ...string) func(values ...interface{}) func(*gorm.DB) *gorm.DB {
+func CompositeSortScopeFunc(comparator Comparator, columns ...string) func(values ...interface{}) func(*gorm.DB) *gorm.DB {
 	return func(values ...interface{}) func(*gorm.DB) *gorm.DB {
 		return func(db *gorm.DB) *gorm.DB {
 			queryValues := make([]interface{}, 0)
@@ -53,12 +60,12 @@ func CompositeSortScopeFunc(compareStr string, columns ...string) func(values ..
 
 			for i, column := range columns[:length] {
 				column = toSnake(column)
-				switch compareStr {
-				case "<":
-					query := fmt.Sprintf("(%s(%s IS NULL OR %s %s ?))", eqQuery, column, column, compareStr)
+				switch comparator {
+				case LessThan:
+					query := fmt.Sprintf("(%s(%s IS NULL OR %s %s ?))", eqQuery, column, column, comparator)
 					queries = append(queries, query)
-				case ">":
-					query := fmt.Sprintf("(%s%s %s ?)", eqQuery, column, compareStr)
+				case GreaterThan:
+					query := fmt.Sprintf("(%s%s %s ?)", eqQuery, column, comparator)
 					queries = append(queries, query)
 				default:
 					panic("Unsupported compareStr")

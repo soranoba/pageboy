@@ -79,13 +79,18 @@ func TestParseCursorString(t *testing.T) {
 }
 
 func TestCursorValidate(t *testing.T) {
-	cursor := &Cursor{Before: "1585706584", After: "1585706584", Limit: 10}
+	// invalid before params
+	cursor := &Cursor{Before: "aaa", After: "", Limit: 10}
 	assertError(t, cursor.Validate())
 
-	cursor = &Cursor{Before: "aaa", After: "", Limit: 10}
-	assertError(t, cursor.Validate())
-
+	// invalid after params
 	cursor = &Cursor{Before: "", After: "aaa", Limit: 10}
+	assertError(t, cursor.Validate())
+
+	// invalid limit params
+	cursor = &Cursor{Before: "1585706584", After: "1585706584"}
+	assertError(t, cursor.Validate())
+	cursor = &Cursor{Before: "1585706584", After: "1585706584", Limit: -1}
 	assertError(t, cursor.Validate())
 
 	cursor = &Cursor{Before: "1585706584.25_20", After: "", Limit: 10}
@@ -94,11 +99,11 @@ func TestCursorValidate(t *testing.T) {
 	cursor = &Cursor{Before: "", After: "1585706584.25_20", Limit: 10}
 	assertNoError(t, cursor.Validate())
 
-	cursor = &Cursor{Before: "1585706584", After: "1585706584"}
-	assertError(t, cursor.Validate())
+	cursor = &Cursor{Before: "1585706584", After: "1585706584", Limit: 10}
+	assertNoError(t, cursor.Validate())
 
-	cursor = &Cursor{Before: "1585706584", After: "1585706584", Limit: -1}
-	assertError(t, cursor.Validate())
+	cursor = &Cursor{Before: "", After: "", Limit: 10}
+	assertNoError(t, cursor.Validate())
 }
 
 func TestCursorPaginate(t *testing.T) {

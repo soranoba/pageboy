@@ -50,9 +50,6 @@ func init() {
 // Validate returns true when the Cursor is valid. Otherwise, it returns false.
 // If you execute Paginate with an invalid value, panic may occur.
 func (cursor *Cursor) Validate() error {
-	if cursor.Before != "" && cursor.After != "" {
-		return errors.New("Both of before and after cannot be specified")
-	}
 	if cursor.Before != "" && !ValidateCursorString(cursor.Before) {
 		return errors.New("The before parameter is invalid")
 	}
@@ -122,27 +119,21 @@ func (cursor *Cursor) Paginate(timeColumn string, columns ...string) func(db *go
 			InstantSet("pageboy:columns", columns).
 			InstantSet("pageboy:cursor", cursor)
 
-		db = (func() *gorm.DB {
-			if cursor.Before == "" && cursor.After == "" {
-				return db.Order(CompositeOrder(DESC, columns...))
-			} else if cursor.Before != "" {
-				t, args := ParseCursorString(cursor.Before)
-				args = append([]interface{}{t}, args...)
-				return db.
-					Scopes(CompositeSortScopeFunc("<", columns...)(args...)).
-					Order(CompositeOrder(DESC, columns...))
-			} else if cursor.After != "" {
-				t, args := ParseCursorString(cursor.After)
-				args = append([]interface{}{t}, args...)
-				return db.
-					Scopes(CompositeSortScopeFunc(">", columns...)(args...)).
-					Order(CompositeOrder(ASC, columns...))
-			} else {
-				panic("invalid cursor")
-			}
-		})()
+		if cursor.Before != "" {
+			t, args := ParseCursorString(cursor.Before)
+			args = append([]interface{}{t}, args...)
+			db = db.Scopes(CompositeSortScopeFunc("<", columns...)(args...))
+		}
 
-		return db.Limit(cursor.Limit)
+		if cursor.After != "" {
+			t, args := ParseCursorString(cursor.After)
+			args = append([]interface{}{t}, args...)
+			db = db.Scopes(CompositeSortScopeFunc(">", columns...)(args...))
+		}
+
+		return db.
+			Order(CompositeOrder(cursor.order(), columns...)).
+			Limit(cursor.Limit)
 	}
 }
 
