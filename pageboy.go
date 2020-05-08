@@ -12,8 +12,8 @@ import (
 type Order string
 
 const (
-	ASC  Order = "ASC"
-	DESC Order = "DESC"
+	ASC  Order = "asc"
+	DESC Order = "desc"
 )
 
 type Comparator string
@@ -30,9 +30,11 @@ const (
 //   CompositeOrder(DESC, "CreatedAt", "ID")
 //
 func CompositeOrder(order Order, columns ...string) string {
+	assert(order != "", "order MUST NOT empty string")
+
 	orders := make([]string, len(columns))
 	for i, column := range columns {
-		orders[i] = fmt.Sprintf("%s %s", toSnake(column), order)
+		orders[i] = fmt.Sprintf("%s %s", toSnake(column), strings.ToUpper(string(order)))
 	}
 	return strings.Join(orders, ", ")
 }

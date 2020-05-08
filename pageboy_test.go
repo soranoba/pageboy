@@ -41,7 +41,7 @@ func openDB() *gorm.DB {
 	if err != nil {
 		panic(fmt.Sprintf("failed to open a database: %+v", err))
 	}
-	return db.Debug()
+	return db
 }
 
 func assertEqual(t *testing.T, got, expected interface{}) bool {

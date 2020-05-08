@@ -25,11 +25,12 @@ type Cursor struct {
 	Before string `json:"before" query:"before"`
 	After  string `json:"after" query:"after"`
 	Limit  int    `json:"limit" query:"limit"`
+	Order  Order  `json:"order" query:"order" enums:"asc,desc"`
 
 	nextBefore *string
 	nextAfter  *string
 	limit      int64
-	hasBefore  bool
+	hasMore    bool
 }
 
 // CursorPagingUrls is for the user to access from the next cursor position.
@@ -47,6 +48,13 @@ func init() {
 		Register("pageboy:cursor:handle_query", cursorHandleQuery)
 }
 
+func NewDefaultCursor() *Cursor {
+	return &Cursor{
+		Limit: 10,
+		Order: DESC,
+	}
+}
+
 // Validate returns true when the Cursor is valid. Otherwise, it returns false.
 // If you execute Paginate with an invalid value, panic may occur.
 func (cursor *Cursor) Validate() error {
@@ -59,7 +67,9 @@ func (cursor *Cursor) Validate() error {
 	if cursor.Limit < 1 {
 		return errors.New("The limit parameter is invalid")
 	}
-
+	if cursor.Order != ASC && cursor.Order != DESC {
+		return errors.New("The order parameter is invalid")
+	}
 	return nil
 }
 
@@ -82,26 +92,45 @@ func (cursor *Cursor) BuildNextPagingUrls(base *url.URL) *CursorPagingUrls {
 	}
 
 	baseUrl := *base
-	query := baseUrl.Query()
 
-	if cursor.nextBefore != nil {
-		beforeUrl := baseUrl
-		query.Del("before")
-		query.Del("after")
-		query.Add("before", *cursor.nextBefore)
-		beforeUrl.RawQuery = query.Encode()
+	(func() {
+		// there are no older elements within the specified range.
+		if cursor.Order == ASC {
+			return
+		}
+		if cursor.Order == DESC && !cursor.hasMore {
+			return
+		}
 
-		fmt.Println(beforeUrl.String())
-		pagingUrls.Before = beforeUrl.String()
-	}
-	if cursor.nextAfter != nil {
-		afterUrl := baseUrl
-		query.Del("before")
-		query.Del("after")
-		query.Add("after", *cursor.nextAfter)
-		afterUrl.RawQuery = query.Encode()
-		pagingUrls.After = afterUrl.String()
-	}
+		if cursor.nextBefore != nil {
+			beforeUrl := baseUrl
+			query := baseUrl.Query()
+			query.Del("before")
+			query.Add("before", *cursor.nextBefore)
+			beforeUrl.RawQuery = query.Encode()
+			pagingUrls.Before = beforeUrl.String()
+		}
+	})()
+
+	(func() {
+		// there are no newer elements within the specified range.
+		if cursor.Order == DESC {
+			return
+		}
+		if cursor.Order == ASC && !cursor.hasMore {
+			return
+		}
+
+		if cursor.nextAfter != nil {
+			afterUrl := baseUrl
+			query := baseUrl.Query()
+			query.Del("after")
+			query.Add("after", *cursor.nextAfter)
+			afterUrl.RawQuery = query.Encode()
+			pagingUrls.After = afterUrl.String()
+		}
+	})()
+
 	return pagingUrls
 }
 
@@ -132,16 +161,9 @@ func (cursor *Cursor) Paginate(timeColumn string, columns ...string) func(db *go
 		}
 
 		return db.
-			Order(CompositeOrder(cursor.order(), columns...)).
+			Order(CompositeOrder(cursor.Order, columns...)).
 			Limit(cursor.Limit)
 	}
-}
-
-func (cursor *Cursor) order() Order {
-	if cursor.After != "" && cursor.Before == "" {
-		return ASC
-	}
-	return DESC
 }
 
 // FormatCursorString returns a string for Cursor from time and integers.
@@ -269,9 +291,7 @@ func cursorHandleBeforeQuery(scope *gorm.Scope) {
 		limit, err := strconv.ParseInt(limitStr, 10, 64)
 		if err == nil {
 			cursor.limit = limit
-			if cursor.After == "" {
-				scope.Search.Limit(limit + 1)
-			}
+			scope.Search.Limit(limit + 1)
 			return
 		}
 	}
@@ -284,7 +304,7 @@ func cursorHandleAfterQuery(scope *gorm.Scope) {
 		return
 	}
 
-	cursor.hasBefore = false
+	cursor.hasMore = false
 	if cursor.limit == -1 {
 		return
 	}
@@ -295,22 +315,8 @@ func cursorHandleAfterQuery(scope *gorm.Scope) {
 	}
 
 	if cursor.limit+1 == int64(results.Len()) {
-		cursor.hasBefore = true
+		cursor.hasMore = true
 		results.Set(results.Slice(0, results.Len()-1))
-	}
-
-	if cursor.order() == ASC {
-		cursor.hasBefore = true
-
-		// NOTE: reverse results.
-		for i := 0; i < results.Len()/2; i++ {
-			s1 := results.Index(i)
-			s2 := results.Index(results.Len() - 1 - i)
-			v1 := s1.Interface()
-			v2 := s2.Interface()
-			s2.Set(reflect.ValueOf(v1))
-			s1.Set(reflect.ValueOf(v2))
-		}
 	}
 }
 
@@ -336,18 +342,26 @@ func cursorHandleQuery(scope *gorm.Scope) {
 	}
 
 	length := results.Len()
-	if length == 0 {
+	if length > 0 {
+		switch cursor.Order {
+		case ASC:
+			cursor.nextAfter = getCursorStringFromColumns(results.Index(length-1), columns...)
+			cursor.nextBefore = getCursorStringFromColumns(results.Index(0), columns...)
+		case DESC:
+			cursor.nextAfter = getCursorStringFromColumns(results.Index(0), columns...)
+			cursor.nextBefore = getCursorStringFromColumns(results.Index(length-1), columns...)
+		}
+	} else {
 		if cursor.After != "" {
 			cursor.nextAfter = &cursor.After
-			var emptyStr string
-			cursor.nextBefore = &emptyStr
 		} else {
 			cursor.nextAfter = getCursorStringFromColumns(reflect.New(results.Type().Elem()), columns...)
 		}
-	} else {
-		cursor.nextAfter = getCursorStringFromColumns(results.Index(0), columns...)
-		if cursor.hasBefore {
-			cursor.nextBefore = getCursorStringFromColumns(results.Index(length-1), columns...)
+
+		if cursor.Before != "" {
+			cursor.nextBefore = &cursor.Before
+		} else {
+			cursor.nextBefore = getCursorStringFromColumns(reflect.New(results.Type().Elem()), columns...)
 		}
 	}
 }
