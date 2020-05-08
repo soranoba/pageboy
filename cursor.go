@@ -3,6 +3,7 @@ package pageboy
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -29,6 +30,12 @@ type Cursor struct {
 	nextAfter  *string
 	limit      int64
 	hasBefore  bool
+}
+
+// CursorPagingUrls is for the user to access from the next cursor position.
+type CursorPagingUrls struct {
+	Before string `json:"before,omitempty"`
+	After  string `json:"after,omitempty"`
 }
 
 func init() {
@@ -67,6 +74,38 @@ func (cursor *Cursor) GetNextAfter() *string {
 // GetNextBefore returns a query to access before the current position if it exists some records.
 func (cursor *Cursor) GetNextBefore() *string {
 	return cursor.nextBefore
+}
+
+// BuildNextPagingUrls returns URLs for the user to access from the next cursor position.
+func (cursor *Cursor) BuildNextPagingUrls(base *url.URL) *CursorPagingUrls {
+	pagingUrls := &CursorPagingUrls{}
+
+	if base == nil {
+		return pagingUrls
+	}
+
+	baseUrl := *base
+	query := baseUrl.Query()
+
+	if cursor.nextBefore != nil {
+		beforeUrl := baseUrl
+		query.Del("before")
+		query.Del("after")
+		query.Add("before", *cursor.nextBefore)
+		beforeUrl.RawQuery = query.Encode()
+
+		fmt.Println(beforeUrl.String())
+		pagingUrls.Before = beforeUrl.String()
+	}
+	if cursor.nextAfter != nil {
+		afterUrl := baseUrl
+		query.Del("before")
+		query.Del("after")
+		query.Add("after", *cursor.nextAfter)
+		afterUrl.RawQuery = query.Encode()
+		pagingUrls.After = afterUrl.String()
+	}
+	return pagingUrls
 }
 
 // Paginate is a scope for the gorm.

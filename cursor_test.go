@@ -1,6 +1,7 @@
 package pageboy
 
 import (
+	"net/url"
 	"testing"
 	"time"
 
@@ -105,6 +106,9 @@ func TestCursorPaginate(t *testing.T) {
 	assertNoError(t, db.DropTableIfExists(&cursorModel{}).Error)
 	assertNoError(t, db.AutoMigrate(&cursorModel{}).Error)
 
+	url, err := url.Parse("https://example.com/users?a=1&limit=10")
+	assertNoError(t, err)
+
 	now := time.Now()
 
 	model1 := &cursorModel{
@@ -148,6 +152,10 @@ func TestCursorPaginate(t *testing.T) {
 	assertEqual(t, models[0].ID, model4.ID)
 	assertEqual(t, *cursor.GetNextAfter(), FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.GetNextBefore(), FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
+		Before: "https://example.com/users?a=1&before=" + FormatCursorString(&models[0].CreatedAt, models[0].ID) + "&limit=10",
+		After:  "https://example.com/users?a=1&after=" + FormatCursorString(&models[0].CreatedAt, models[0].ID) + "&limit=10",
+	})
 
 	cursor = &Cursor{
 		Before: *cursor.GetNextBefore(),
@@ -159,6 +167,10 @@ func TestCursorPaginate(t *testing.T) {
 	assertEqual(t, models[1].ID, model2.ID)
 	assertEqual(t, *cursor.GetNextAfter(), FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.GetNextBefore(), FormatCursorString(&models[1].CreatedAt, models[1].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
+		Before: "https://example.com/users?a=1&before=" + FormatCursorString(&models[1].CreatedAt, models[1].ID) + "&limit=10",
+		After:  "https://example.com/users?a=1&after=" + FormatCursorString(&models[0].CreatedAt, models[0].ID) + "&limit=10",
+	})
 
 	cursor = &Cursor{
 		Before: *cursor.GetNextBefore(),
@@ -169,6 +181,10 @@ func TestCursorPaginate(t *testing.T) {
 	assertEqual(t, models[0].ID, model1.ID)
 	assertEqual(t, *cursor.GetNextAfter(), FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, cursor.GetNextBefore(), (*string)(nil))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
+		Before: "",
+		After:  "https://example.com/users?a=1&after=" + FormatCursorString(&models[0].CreatedAt, models[0].ID) + "&limit=10",
+	})
 
 	cursor = &Cursor{
 		After: *cursor.GetNextAfter(),
@@ -180,6 +196,10 @@ func TestCursorPaginate(t *testing.T) {
 	assertEqual(t, models[1].ID, model2.ID)
 	assertEqual(t, *cursor.GetNextAfter(), FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.GetNextBefore(), FormatCursorString(&models[1].CreatedAt, models[1].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
+		Before: "https://example.com/users?a=1&before=" + FormatCursorString(&models[1].CreatedAt, models[1].ID) + "&limit=10",
+		After:  "https://example.com/users?a=1&after=" + FormatCursorString(&models[0].CreatedAt, models[0].ID) + "&limit=10",
+	})
 
 	cursor = &Cursor{
 		After: *cursor.GetNextAfter(),
@@ -190,10 +210,14 @@ func TestCursorPaginate(t *testing.T) {
 	assertEqual(t, models[0].ID, model4.ID)
 	assertEqual(t, *cursor.GetNextAfter(), FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.GetNextBefore(), FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
+		Before: "https://example.com/users?a=1&before=" + FormatCursorString(&models[0].CreatedAt, models[0].ID) + "&limit=10",
+		After:  "https://example.com/users?a=1&after=" + FormatCursorString(&models[0].CreatedAt, models[0].ID) + "&limit=10",
+	})
 }
 
 func TestCursorPaginateNullable(t *testing.T) {
-	db := openDB().Debug()
+	db := openDB()
 	assertNoError(t, db.DropTableIfExists(&cursorModel{}).Error)
 	assertNoError(t, db.AutoMigrate(&cursorModel{}).Error)
 
