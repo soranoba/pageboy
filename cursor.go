@@ -124,19 +124,19 @@ func (cursor *Cursor) Paginate(timeColumn string, columns ...string) func(db *go
 
 		db = (func() *gorm.DB {
 			if cursor.Before == "" && cursor.After == "" {
-				return db.Order(CompositeOrder("DESC", columns...))
+				return db.Order(CompositeOrder(DESC, columns...))
 			} else if cursor.Before != "" {
 				t, args := ParseCursorString(cursor.Before)
 				args = append([]interface{}{t}, args...)
 				return db.
 					Scopes(CompositeSortScopeFunc("<", columns...)(args...)).
-					Order(CompositeOrder("DESC", columns...))
+					Order(CompositeOrder(DESC, columns...))
 			} else if cursor.After != "" {
 				t, args := ParseCursorString(cursor.After)
 				args = append([]interface{}{t}, args...)
 				return db.
 					Scopes(CompositeSortScopeFunc(">", columns...)(args...)).
-					Order(CompositeOrder("ASC", columns...))
+					Order(CompositeOrder(ASC, columns...))
 			} else {
 				panic("invalid cursor")
 			}
@@ -144,6 +144,13 @@ func (cursor *Cursor) Paginate(timeColumn string, columns ...string) func(db *go
 
 		return db.Limit(cursor.Limit)
 	}
+}
+
+func (cursor *Cursor) order() Order {
+	if cursor.After != "" && cursor.Before == "" {
+		return ASC
+	}
+	return DESC
 }
 
 // FormatCursorString returns a string for Cursor from time and integers.
@@ -300,8 +307,11 @@ func cursorHandleAfterQuery(scope *gorm.Scope) {
 		cursor.hasBefore = true
 		results.Set(results.Slice(0, results.Len()-1))
 	}
-	if cursor.After != "" {
+
+	if cursor.order() == ASC {
 		cursor.hasBefore = true
+
+		// NOTE: reverse results.
 		for i := 0; i < results.Len()/2; i++ {
 			s1 := results.Index(i)
 			s2 := results.Index(results.Len() - 1 - i)

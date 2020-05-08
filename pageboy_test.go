@@ -12,8 +12,8 @@ import (
 )
 
 func TestCompositeOrder(t *testing.T) {
-	assertEqual(t, CompositeOrder("ASC", "ID", "CreatedAt"), "id ASC, created_at ASC")
-	assertEqual(t, CompositeOrder("DESC", "ID", "CreatedAt"), "id DESC, created_at DESC")
+	assertEqual(t, CompositeOrder(ASC, "ID", "CreatedAt"), "id ASC, created_at ASC")
+	assertEqual(t, CompositeOrder(DESC, "ID", "CreatedAt"), "id DESC, created_at DESC")
 }
 
 func TestUnixToTime(t *testing.T) {

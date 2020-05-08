@@ -9,16 +9,23 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
+type Order string
+
+const (
+	ASC  Order = "ASC"
+	DESC Order = "DESC"
+)
+
 // CompositeOrder returns order string to specifies the order of the composite key.
 //
 // Examples:
 //
-//   CompositeOrder("DESC", "CreatedAt", "ID")
+//   CompositeOrder(DESC, "CreatedAt", "ID")
 //
-func CompositeOrder(sort string, columns ...string) string {
+func CompositeOrder(order Order, columns ...string) string {
 	orders := make([]string, len(columns))
 	for i, column := range columns {
-		orders[i] = fmt.Sprintf("%s %s", toSnake(column), sort)
+		orders[i] = fmt.Sprintf("%s %s", toSnake(column), order)
 	}
 	return strings.Join(orders, ", ")
 }
