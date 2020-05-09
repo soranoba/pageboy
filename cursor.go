@@ -27,8 +27,8 @@ type Cursor struct {
 	Limit  int    `json:"limit" query:"limit"`
 	Order  Order  `json:"order" query:"order" enums:"asc,desc"`
 
-	nextBefore *string
-	nextAfter  *string
+	nextBefore string
+	nextAfter  string
 	limit      int64
 	hasMore    bool
 }
@@ -48,6 +48,7 @@ func init() {
 		Register("pageboy:cursor:handle_query", cursorHandleQuery)
 }
 
+// NewDefaultCursor returns a default Cursor.
 func NewDefaultCursor() *Cursor {
 	return &Cursor{
 		Limit: 10,
@@ -74,12 +75,12 @@ func (cursor *Cursor) Validate() error {
 }
 
 // GetNextAfter returns a query to access after the current position if it exists some records.
-func (cursor *Cursor) GetNextAfter() *string {
+func (cursor *Cursor) GetNextAfter() string {
 	return cursor.nextAfter
 }
 
 // GetNextBefore returns a query to access before the current position if it exists some records.
-func (cursor *Cursor) GetNextBefore() *string {
+func (cursor *Cursor) GetNextBefore() string {
 	return cursor.nextBefore
 }
 
@@ -102,11 +103,11 @@ func (cursor *Cursor) BuildNextPagingUrls(base *url.URL) *CursorPagingUrls {
 			return
 		}
 
-		if cursor.nextBefore != nil {
+		if cursor.nextBefore != "" {
 			beforeUrl := baseUrl
 			query := baseUrl.Query()
 			query.Del("before")
-			query.Add("before", *cursor.nextBefore)
+			query.Add("before", cursor.nextBefore)
 			beforeUrl.RawQuery = query.Encode()
 			pagingUrls.Before = beforeUrl.String()
 		}
@@ -121,11 +122,11 @@ func (cursor *Cursor) BuildNextPagingUrls(base *url.URL) *CursorPagingUrls {
 			return
 		}
 
-		if cursor.nextAfter != nil {
+		if cursor.nextAfter != "" {
 			afterUrl := baseUrl
 			query := baseUrl.Query()
 			query.Del("after")
-			query.Add("after", *cursor.nextAfter)
+			query.Add("after", cursor.nextAfter)
 			afterUrl.RawQuery = query.Encode()
 			pagingUrls.After = afterUrl.String()
 		}
@@ -330,8 +331,8 @@ func cursorHandleQuery(scope *gorm.Scope) {
 		return
 	}
 
-	cursor.nextBefore = nil
-	cursor.nextAfter = nil
+	cursor.nextBefore = ""
+	cursor.nextAfter = ""
 
 	if scope.HasError() {
 		return
@@ -353,39 +354,37 @@ func cursorHandleQuery(scope *gorm.Scope) {
 		}
 	} else {
 		if cursor.After != "" {
-			cursor.nextAfter = &cursor.After
+			cursor.nextAfter = cursor.After
 		} else {
 			cursor.nextAfter = getCursorStringFromColumns(reflect.New(results.Type().Elem()), columns...)
 		}
 
 		if cursor.Before != "" {
-			cursor.nextBefore = &cursor.Before
+			cursor.nextBefore = cursor.Before
 		} else {
 			cursor.nextBefore = getCursorStringFromColumns(reflect.New(results.Type().Elem()), columns...)
 		}
 	}
 }
 
-func getCursorStringFromColumns(value reflect.Value, columns ...string) *string {
+func getCursorStringFromColumns(value reflect.Value, columns ...string) string {
 	value = reflect.Indirect(value)
 	if !(value.Kind() == reflect.Struct && value.Kind() == reflect.Struct) {
-		return nil
+		panic("Find result is not a struct or an array of struct.")
 	}
 	if len(columns) == 0 {
-		return nil
+		return ""
 	}
 
 	timeValue := value.FieldByName(columns[0])
-	// the field does not found
 	if timeValue == (reflect.Value{}) {
-		return nil
+		panic(fmt.Sprintf("%s field does not exist", columns[0]))
 	}
 
 	t := new(time.Time)
-	// the type of the filed is not time
 	if !(timeValue.Type() == reflect.TypeOf(t) ||
 		reflect.PtrTo(timeValue.Type()) == reflect.TypeOf(t)) {
-		return nil
+		panic(fmt.Sprintf("%s field is not time.Time or *time.Time", columns[0]))
 	}
 
 	if !timeValue.CanInterface() {
@@ -408,6 +407,5 @@ func getCursorStringFromColumns(value reflect.Value, columns ...string) *string 
 		}
 	}
 
-	str := FormatCursorString(t, args...)
-	return &str
+	return FormatCursorString(t, args...)
 }
