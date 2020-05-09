@@ -15,10 +15,10 @@ import (
 
 // Cursor can to get a specific range of records from DB in time order.
 //
-// When limit is smaller than or equal to 0, the validation will fail.
+// When Limit is smaller than or equal to 0 or Order is empty, the validation will fail.
 // You should set the initial values and then read it from query or json.
 //
-//   cursor := &Cursor{Limit: 10}
+//   cursor := &pageboy.Cursor{Limit: 10, Order: pageboy.DESC}
 //   ctx.Bind(cursor)
 //
 type Cursor struct {
@@ -48,8 +48,8 @@ func init() {
 		Register("pageboy:cursor:handle_query", cursorHandleQuery)
 }
 
-// NewDefaultCursor returns a default Cursor.
-func NewDefaultCursor() *Cursor {
+// NewCursor returns a default Cursor.
+func NewCursor() *Cursor {
 	return &Cursor{
 		Limit: 10,
 		Order: DESC,
@@ -85,6 +85,8 @@ func (cursor *Cursor) GetNextBefore() string {
 }
 
 // BuildNextPagingUrls returns URLs for the user to access from the next cursor position.
+//
+// You can use GetNextBefore and GetNextAfter if you want to customize the behavior.
 func (cursor *Cursor) BuildNextPagingUrls(base *url.URL) *CursorPagingUrls {
 	pagingUrls := &CursorPagingUrls{}
 
