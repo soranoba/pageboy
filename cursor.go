@@ -115,7 +115,7 @@ func (cursor *Cursor) BuildNextPagingUrls(base *url.URL) *CursorPagingUrls {
 
 	(func() {
 		// there are no newer elements within the specified range.
-		if cursor.Order == DESC {
+		if cursor.Order == DESC && cursor.Before != "" {
 			return
 		}
 		if cursor.Order == ASC && !cursor.hasMore {
