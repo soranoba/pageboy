@@ -47,7 +47,7 @@ type UsersRequest struct {
 
 func getUsers(ctx echo.Context) error {
 	// Set to Default Limit
-	req := &UsersRequest{Cursor: pageboy.Cursor{Limit: 10}}
+	req := &UsersRequest{Cursor: pageboy.Cursor{Limit: 10, Order: pageboy.DESC}}
 	// Read from query or body
 	if err := ctx.Bind(req); err != nil {
 		return err
