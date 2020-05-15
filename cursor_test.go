@@ -173,9 +173,7 @@ func TestCursorPaginateDESC(t *testing.T) {
 		Before: "https://example.com/users?a=1" +
 			"&before=" + FormatCursorString(&models[0].CreatedAt, models[0].ID) +
 			"&limit=1&order=desc",
-		After: "https://example.com/users?a=1" +
-			"&after=" + FormatCursorString(&models[0].CreatedAt, models[0].ID) +
-			"&limit=1&order=desc",
+		After: "",
 	})
 
 	cursor = &Cursor{
@@ -465,9 +463,7 @@ func TestCursorPaginateWithAfterDESC(t *testing.T) {
 			"&after=" + cursor.After +
 			"&before=" + FormatCursorString(&models[1].CreatedAt, models[1].ID) +
 			"&limit=2&order=desc",
-		After: "https://example.com/users?a=1" +
-			"&after=" + FormatCursorString(&models[0].CreatedAt, models[0].ID) +
-			"&limit=2&order=desc",
+		After: "",
 	})
 
 	cursor = &Cursor{

@@ -34,6 +34,7 @@ type Cursor struct {
 }
 
 // CursorPagingUrls is for the user to access from the next cursor position.
+// If it is no records at target of before or after, it will be empty strings.
 type CursorPagingUrls struct {
 	Before string `json:"before,omitempty"`
 	After  string `json:"after,omitempty"`
@@ -116,8 +117,8 @@ func (cursor *Cursor) BuildNextPagingUrls(base *url.URL) *CursorPagingUrls {
 	})()
 
 	(func() {
-		// there are no newer elements within the specified range.
-		if cursor.Order == DESC && cursor.Before != "" {
+		// there are no newer elements within the specified range now.
+		if cursor.Order == DESC {
 			return
 		}
 		if cursor.Order == ASC && !cursor.hasMore {
