@@ -4,7 +4,7 @@ pageboy
 [![Go Report Card](https://goreportcard.com/badge/github.com/soranoba/pageboy)](https://goreportcard.com/report/github.com/soranoba/pageboy)
 [![GoDoc](https://godoc.org/github.com/soranoba/pageboy?status.svg)](https://godoc.org/github.com/soranoba/pageboy)
 
-`pageboy` is a [GORM](https://github.com/jinzhu/gorm) pagination library.
+`pageboy` is a [GORM](https://github.com/go-gorm/gorm) pagination library.
 
 ## Features
 

@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // Cursor can to get a specific range of records from DB in time order.
@@ -29,7 +29,7 @@ type Cursor struct {
 
 	nextBefore string
 	nextAfter  string
-	limit      int64
+	limit      int
 	hasMore    bool
 }
 
@@ -40,13 +40,52 @@ type CursorPagingUrls struct {
 	After  string `json:"after,omitempty"`
 }
 
-func init() {
-	gorm.DefaultCallback.Query().Before("gorm:query").
-		Register("pageboy:cursor:before_query", cursorHandleBeforeQuery)
-	gorm.DefaultCallback.Query().After("gorm:query").
-		Register("pageboy:cursor:after_query", cursorHandleAfterQuery)
-	gorm.DefaultCallback.Query().
-		Register("pageboy:cursor:handle_query", cursorHandleQuery)
+type CursorSegment struct {
+	integer int64
+	nano    int64
+	isNil   bool
+}
+
+type CursorSegments []CursorSegment
+
+func (seg CursorSegment) IsNil() bool {
+	return seg.isNil
+}
+
+func (seg CursorSegment) Int64() int64 {
+	return seg.integer
+}
+
+func (seg CursorSegment) Time() *time.Time {
+	if seg.isNil {
+		return nil
+	}
+	t := time.Unix(seg.integer, seg.nano)
+	return &t
+}
+
+func (seg CursorSegment) Interface(ty reflect.Type, column string) interface{} {
+	assert(ty.Kind() == reflect.Struct, "model must be struct")
+	field, ok := ty.FieldByName(column)
+	if !ok {
+		return seg.Int64()
+	}
+
+	if field.Type == reflect.TypeOf(time.Time{}) ||
+		field.Type == reflect.TypeOf(new(time.Time)) {
+		return seg.Time()
+	}
+	return seg.Int64()
+}
+
+func (segs CursorSegments) Interface(ty reflect.Type, columns ...string) []interface{} {
+	assert(len(segs) == len(columns), "invalid number of columns")
+
+	results := make([]interface{}, len(columns))
+	for i, column := range columns {
+		results[i] = segs[i].Interface(ty, column)
+	}
+	return results
 }
 
 // NewCursor returns a default Cursor.
@@ -148,21 +187,9 @@ func (cursor *Cursor) Paginate(timeColumn string, columns ...string) func(db *go
 	columns = append([]string{timeColumn}, columns...)
 
 	return func(db *gorm.DB) *gorm.DB {
-		db = db.New().
-			InstantSet("pageboy:columns", columns).
-			InstantSet("pageboy:cursor", cursor)
-
-		if cursor.Before != "" {
-			t, args := ParseCursorString(cursor.Before)
-			args = append([]interface{}{t}, args...)
-			db = db.Scopes(CompositeSortScopeFunc("<", columns...)(args...))
-		}
-
-		if cursor.After != "" {
-			t, args := ParseCursorString(cursor.After)
-			args = append([]interface{}{t}, args...)
-			db = db.Scopes(CompositeSortScopeFunc(">", columns...)(args...))
-		}
+		registerCursorCallbacks(db)
+		db = db.InstanceSet("pageboy:columns", columns).
+			InstanceSet("pageboy:cursor", cursor)
 
 		return db.
 			Order(CompositeOrder(cursor.Order, columns...)).
@@ -170,33 +197,43 @@ func (cursor *Cursor) Paginate(timeColumn string, columns ...string) func(db *go
 	}
 }
 
-// FormatCursorString returns a string for Cursor from time and integers.
-func FormatCursorString(t *time.Time, args ...interface{}) string {
+// FormatCursorString returns a string for Cursor.
+func FormatCursorString(args ...interface{}) string {
 	var str string
-
-	// time
-	if t != nil {
-		str = strconv.FormatInt(t.Unix(), 10) + "." + strconv.Itoa(t.Nanosecond())
-		str = strings.TrimRight(str, "0")
-		str = strings.TrimRight(str, ".")
-	}
 
 	// args
 	var i64 int64
 	i64t := reflect.TypeOf(i64)
 	var ui64 uint64
 	ui64t := reflect.TypeOf(ui64)
+	var ti time.Time
+	tit := reflect.TypeOf(ti)
 
-	for _, arg := range args {
-		str += "_" + (func() string {
+	for i, arg := range args {
+		if i > 0 {
+			str += "_"
+		}
+		str += (func() string {
 			if arg == nil {
 				return ""
 			}
-			v := reflect.Indirect(reflect.ValueOf(arg))
+
+			v := reflect.ValueOf(arg)
+			if v.Kind() == reflect.Ptr && v.IsNil() {
+				return ""
+			}
+
+			v = reflect.Indirect(v)
 			if v.Type().ConvertibleTo(i64t) {
 				return strconv.FormatInt(v.Convert(i64t).Interface().(int64), 10)
 			} else if v.Type().ConvertibleTo(ui64t) {
 				return strconv.FormatUint(v.Convert(ui64t).Interface().(uint64), 10)
+			} else if v.Type().ConvertibleTo(tit) {
+				t := v.Convert(tit).Interface().(time.Time)
+				s := strconv.FormatInt(t.Unix(), 10) + "." + strconv.Itoa(t.Nanosecond())
+				s = strings.TrimRight(s, "0")
+				s = strings.TrimRight(s, ".")
+				return s
 			}
 			panic(fmt.Sprintf("Unsupported type arg specified: arg = %v", arg))
 		})()
@@ -223,42 +260,45 @@ func ValidateCursorString(str string) bool {
 	return true
 }
 
-// ParseCursorString parses a string for cursor to a time and integers.
-func ParseCursorString(str string) (*time.Time, []interface{}) {
+// ParseCursorString parses a string for cursor.
+func ParseCursorString(str string) CursorSegments {
 	parts := strings.Split(str, "_")
 
 	if len(parts) == 0 {
 		panic("invalid cursor")
 	}
 
-	t := (func() *time.Time {
-		if parts[0] == "" {
-			return nil
-		}
-		unix, err := strconv.ParseFloat(parts[0], 64)
-		if err != nil {
-			panic("invalid cursor")
-		}
-		return unixToTime(unix)
-	})()
-	args := make([]interface{}, len(parts)-1)
+	args := make([]CursorSegment, len(parts))
 
-	for i, part := range parts[1:] {
+	for i, part := range parts {
 		if part == "" {
+			args[i] = CursorSegment{isNil: true}
 			continue
 		}
-		v, err := strconv.ParseInt(part, 10, 64)
+
+		numberParts := strings.Split(part, ".")
+		integer, err := strconv.ParseInt(numberParts[0], 10, 64)
 		if err != nil {
 			panic("invalid cursor")
 		}
-		args[i] = v
+		nano := int64(0)
+		if len(numberParts) > 1 {
+			numberParts[1] += strings.Repeat("0", 9-len(numberParts[1]))
+			numberParts[1] = numberParts[1][0:9]
+			nano, err = strconv.ParseInt(numberParts[1], 10, 64)
+			if err != nil {
+				panic("invalid cursor")
+			}
+		}
+
+		args[i] = CursorSegment{integer: integer, nano: nano}
 	}
 
-	return t, args
+	return args
 }
 
-func getCursor(scope *gorm.Scope) (*Cursor, bool) {
-	value, ok := scope.Get("pageboy:cursor")
+func getCursor(db *gorm.DB) (*Cursor, bool) {
+	value, ok := db.InstanceGet("pageboy:cursor")
 	if !ok {
 		return nil, false
 	}
@@ -269,8 +309,8 @@ func getCursor(scope *gorm.Scope) (*Cursor, bool) {
 	return cursor, true
 }
 
-func getColumns(scope *gorm.Scope) ([]string, bool) {
-	value, ok := scope.Get("pageboy:columns")
+func getColumns(db *gorm.DB) ([]string, bool) {
+	value, ok := db.InstanceGet("pageboy:columns")
 	if !ok {
 		return nil, false
 	}
@@ -281,29 +321,46 @@ func getColumns(scope *gorm.Scope) ([]string, bool) {
 	return columns, true
 }
 
-func cursorHandleBeforeQuery(scope *gorm.Scope) {
-	cursor, ok := getCursor(scope)
+func cursorHandleBeforeQuery(db *gorm.DB) {
+	cursor, ok := getCursor(db)
 	if !ok {
 		return
 	}
 
-	re := regexp.MustCompile(`LIMIT\s+([0-9]+)`)
-
-	matches := re.FindStringSubmatch(scope.DB().NewScope(scope.DB().Value).CombinedConditionSql())
-	if len(matches) == 2 {
-		limitStr := matches[1]
-		limit, err := strconv.ParseInt(limitStr, 10, 64)
-		if err == nil {
-			cursor.limit = limit
-			scope.Search.Limit(limit + 1)
-			return
-		}
+	columns, ok := getColumns(db)
+	if !ok {
+		return
 	}
-	cursor.limit = -1
+
+	dest := db.Statement.Dest
+	ty := reflect.TypeOf(dest)
+	for ty.Kind() == reflect.Ptr || ty.Kind() == reflect.Array || ty.Kind() == reflect.Slice {
+		ty = ty.Elem()
+	}
+
+	if cursor.Before != "" {
+		segments := ParseCursorString(cursor.Before)
+		args := segments.Interface(ty, columns...)
+		db = db.Scopes(CompositeSortScopeFunc("<", columns...)(args...))
+	}
+
+	if cursor.After != "" {
+		segments := ParseCursorString(cursor.After)
+		args := segments.Interface(ty, columns...)
+		db = db.Scopes(CompositeSortScopeFunc(">", columns...)(args...))
+	}
+
+	limit, ok := db.Statement.Clauses[new(clause.Limit).Name()]
+	if ok {
+		cursor.limit = limit.Expression.(clause.Limit).Limit
+		db.Limit(cursor.limit + 1)
+	} else {
+		cursor.limit = -1
+	}
 }
 
-func cursorHandleAfterQuery(scope *gorm.Scope) {
-	cursor, ok := getCursor(scope)
+func cursorHandleAfterQuery(db *gorm.DB) {
+	cursor, ok := getCursor(db)
 	if !ok {
 		return
 	}
@@ -313,23 +370,23 @@ func cursorHandleAfterQuery(scope *gorm.Scope) {
 		return
 	}
 
-	results := scope.IndirectValue()
+	results := db.Statement.ReflectValue
 	if !(results.Kind() == reflect.Array || results.Kind() == reflect.Slice) {
 		return
 	}
 
-	if cursor.limit+1 == int64(results.Len()) {
+	if cursor.limit+1 == results.Len() {
 		cursor.hasMore = true
 		results.Set(results.Slice(0, results.Len()-1))
 	}
 }
 
-func cursorHandleQuery(scope *gorm.Scope) {
-	cursor, ok := getCursor(scope)
+func cursorHandleQuery(db *gorm.DB) {
+	cursor, ok := getCursor(db)
 	if !ok {
 		return
 	}
-	columns, ok := getColumns(scope)
+	columns, ok := getColumns(db)
 	if !ok {
 		return
 	}
@@ -337,10 +394,10 @@ func cursorHandleQuery(scope *gorm.Scope) {
 	cursor.nextBefore = ""
 	cursor.nextAfter = ""
 
-	if scope.HasError() {
+	if db.Error != nil {
 		return
 	}
-	results := scope.IndirectValue()
+	results := db.Statement.ReflectValue
 	if !(results.Kind() == reflect.Array || results.Kind() == reflect.Slice) {
 		return
 	}
@@ -384,29 +441,8 @@ func getCursorStringFromColumns(value reflect.Value, columns ...string) string {
 		return ""
 	}
 
-	timeValue := value.FieldByName(columns[0])
-	if timeValue == (reflect.Value{}) {
-		panic(fmt.Sprintf("%s field does not exist", columns[0]))
-	}
-
-	t := new(time.Time)
-	if !(timeValue.Type() == reflect.TypeOf(t) ||
-		reflect.PtrTo(timeValue.Type()) == reflect.TypeOf(t)) {
-		panic(fmt.Sprintf("%s field is not time.Time or *time.Time", columns[0]))
-	}
-
-	if !timeValue.CanInterface() {
-		panic("timeValue can not interface")
-	}
-
-	if timeValue.Kind() == reflect.Ptr {
-		t = timeValue.Interface().(*time.Time)
-	} else {
-		*t = timeValue.Interface().(time.Time)
-	}
-
-	args := make([]interface{}, len(columns)-1)
-	for i, column := range columns[1:] {
+	args := make([]interface{}, len(columns))
+	for i, column := range columns {
 		argValue := value.FieldByName(column)
 		if argValue.CanInterface() {
 			args[i] = argValue.Interface()
@@ -415,5 +451,14 @@ func getCursorStringFromColumns(value reflect.Value, columns ...string) string {
 		}
 	}
 
-	return FormatCursorString(t, args...)
+	return FormatCursorString(args...)
+}
+
+func registerCursorCallbacks(db *gorm.DB) {
+	db.Callback().Query().Before("gorm:query").
+		Replace("pageboy:cursor:before_query", cursorHandleBeforeQuery)
+	db.Callback().Query().After("gorm:query").
+		Replace("pageboy:cursor:after_query", cursorHandleAfterQuery)
+	db.Callback().Query().
+		Replace("pageboy:cursor:handle_query", cursorHandleQuery)
 }

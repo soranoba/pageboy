@@ -5,23 +5,14 @@ import (
 	"reflect"
 	"runtime"
 	"testing"
-	"time"
 
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 func TestCompositeOrder(t *testing.T) {
 	assertEqual(t, CompositeOrder(ASC, "ID", "CreatedAt"), "id ASC, created_at ASC")
 	assertEqual(t, CompositeOrder(DESC, "ID", "CreatedAt"), "id DESC, created_at DESC")
-}
-
-func TestUnixToTime(t *testing.T) {
-	format := "2006-01-02T15:04:05.999"
-	ti, err := time.Parse(format, "2020-04-01T02:03:04.250")
-	assertNoError(t, err)
-
-	assertEqual(t, *unixToTime(1585706584.25), ti.Local())
 }
 
 func TestToSnake(t *testing.T) {
@@ -34,11 +25,13 @@ func TestToSnake(t *testing.T) {
 
 func openDB() *gorm.DB {
 	db, err := gorm.Open(
-		"mysql",
-		fmt.Sprintf(
-			"%s:%s@(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-			"pageboy", "pageboy", "127.0.0.1", 3306, "pageboy",
+		mysql.Open(
+			fmt.Sprintf(
+				"%s:%s@(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+				"pageboy", "pageboy", "127.0.0.1", 3306, "pageboy",
+			),
 		),
+		&gorm.Config{},
 	)
 	if err != nil {
 		panic(fmt.Sprintf("failed to open a database: %+v", err))

@@ -4,12 +4,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 type pagerModel struct {
 	gorm.Model
-	name string
+	Name string
 }
 
 func TestPagerValidate(t *testing.T) {
@@ -25,8 +25,8 @@ func TestPagerValidate(t *testing.T) {
 
 func TestPagerPaginate(t *testing.T) {
 	db := openDB()
-	assertNoError(t, db.DropTableIfExists(&pagerModel{}).Error)
-	assertNoError(t, db.AutoMigrate(&pagerModel{}).Error)
+	assertNoError(t, db.Migrator().DropTable(&pagerModel{}))
+	assertNoError(t, db.AutoMigrate(&pagerModel{}))
 
 	now := time.Now()
 
@@ -34,7 +34,6 @@ func TestPagerPaginate(t *testing.T) {
 		Model: gorm.Model{
 			CreatedAt: now,
 		},
-		name: "aaa",
 	}
 	assertNoError(t, db.Create(&model1).Error)
 
@@ -42,15 +41,13 @@ func TestPagerPaginate(t *testing.T) {
 		Model: gorm.Model{
 			CreatedAt: now,
 		},
-		name: "bbb",
 	}
 	assertNoError(t, db.Create(&model2).Error)
 
 	model3 := &pagerModel{
 		Model: gorm.Model{
-			CreatedAt: now.Add(10 * time.Millisecond),
+			CreatedAt: now.Add(10 * time.Second),
 		},
-		name: "ccc",
 	}
 	assertNoError(t, db.Create(&model3).Error)
 
@@ -58,7 +55,6 @@ func TestPagerPaginate(t *testing.T) {
 		Model: gorm.Model{
 			CreatedAt: now.Add(10 * time.Hour),
 		},
-		name: "ddd",
 	}
 	assertNoError(t, db.Create(&model4).Error)
 
@@ -80,4 +76,52 @@ func TestPagerPaginate(t *testing.T) {
 	assertNoError(t, db.Scopes(pager.Paginate()).Order("id ASC").Find(&models).Error)
 	assertEqual(t, len(models), 0)
 	assertEqual(t, *pager.Summary(), PagerSummary{Page: 3, PerPage: 3, TotalCount: 4, TotalPage: 2})
+}
+
+func TestPagerPaginateWithWhere(t *testing.T) {
+	db := openDB().Debug()
+	assertNoError(t, db.Migrator().DropTable(&pagerModel{}))
+	assertNoError(t, db.AutoMigrate(&pagerModel{}))
+
+	now := time.Now()
+
+	model1 := &pagerModel{
+		Model: gorm.Model{
+			CreatedAt: now,
+		},
+		Name: "aaa",
+	}
+	assertNoError(t, db.Create(&model1).Error)
+
+	model2 := &pagerModel{
+		Model: gorm.Model{
+			CreatedAt: now,
+		},
+		Name: "aaa",
+	}
+	assertNoError(t, db.Create(&model2).Error)
+
+	model3 := &pagerModel{
+		Model: gorm.Model{
+			CreatedAt: now.Add(10 * time.Second),
+		},
+		Name: "ccc",
+	}
+	assertNoError(t, db.Create(&model3).Error)
+
+	model4 := &pagerModel{
+		Model: gorm.Model{
+			CreatedAt: now.Add(10 * time.Hour),
+		},
+		Name: "ddd",
+	}
+	assertNoError(t, db.Create(&model4).Error)
+
+	var models []*pagerModel
+	pager := &Pager{Page: 1, PerPage: 2}
+	assertNoError(t, db.Scopes(pager.Paginate()).Where("name = ?", "aaa").Order("id ASC").Find(&models).Error)
+	assertEqual(t, len(models), 2)
+	assertEqual(t, models[0].ID, model1.ID)
+	assertEqual(t, models[1].ID, model2.ID)
+	assertEqual(t, *pager.Summary(), PagerSummary{Page: 1, PerPage: 2, TotalCount: 2, TotalPage: 1})
 }

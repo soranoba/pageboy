@@ -4,28 +4,23 @@ import (
 	"errors"
 	"math"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 // Pager can to get a specific range of records from DB.
 type Pager struct {
-	Page    uint `json:"page" query:"page"`
-	PerPage uint `json:"per_page" query:"per_page"`
+	Page    int `json:"page" query:"page"`
+	PerPage int `json:"per_page" query:"per_page"`
 
-	totalCount uint
+	totalCount int64
 }
 
 // PagerSummary is summary of the query.
 type PagerSummary struct {
-	Page       uint `json:"page" query:"page"`
-	PerPage    uint `json:"per_page" query:"per_page"`
-	TotalCount uint `json:"total_count" query:"total_count"`
-	TotalPage  uint `json:"total_page" query:"total_page"`
-}
-
-func init() {
-	gorm.DefaultCallback.Query().Before("gorm:query").
-		Register("pageboy:pager:before_query", pagerHandleBeforeQuery)
+	Page       int   `json:"page" query:"page"`
+	PerPage    int   `json:"per_page" query:"per_page"`
+	TotalCount int64 `json:"total_count" query:"total_count"`
+	TotalPage  int   `json:"total_page" query:"total_page"`
 }
 
 // NewPager returns a default pager.
@@ -42,7 +37,7 @@ func (pager *Pager) Summary() *PagerSummary {
 		Page:       pager.Page,
 		PerPage:    pager.PerPage,
 		TotalCount: pager.totalCount,
-		TotalPage:  uint(math.Ceil(float64(pager.totalCount) / float64(pager.PerPage))),
+		TotalPage:  int(math.Ceil(float64(pager.totalCount) / float64(pager.PerPage))),
 	}
 }
 
@@ -66,13 +61,14 @@ func (pager *Pager) Validate() error {
 //
 func (pager *Pager) Paginate() func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
-		db = db.New().Set("pageboy:pager", pager)
+		registerPagerCallbacks(db)
+		db = db.InstanceSet("pageboy:pager", pager)
 		return db.Offset((pager.Page - 1) * pager.PerPage).Limit(pager.PerPage)
 	}
 }
 
-func pagerHandleBeforeQuery(scope *gorm.Scope) {
-	value, ok := scope.Get("pageboy:pager")
+func pagerHandleBeforeQuery(db *gorm.DB) {
+	value, ok := db.InstanceGet("pageboy:pager")
 	if !ok {
 		return
 	}
@@ -80,5 +76,13 @@ func pagerHandleBeforeQuery(scope *gorm.Scope) {
 	if !ok {
 		return
 	}
-	scope.DB().NewScope(scope.DB().Value).DB().Offset(0).Limit(-1).Count(&pager.totalCount)
+
+	tx := db.Session(&gorm.Session{WithConditions: true})
+	tx.Offset(0).Limit(-1).
+		Model(db.Statement.Dest).Count(&pager.totalCount)
+}
+
+func registerPagerCallbacks(db *gorm.DB) {
+	db.Callback().Query().Before("gorm:query").
+		Replace("pageboy:pager:before_query", pagerHandleBeforeQuery)
 }

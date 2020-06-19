@@ -2,12 +2,10 @@ package pageboy
 
 import (
 	"fmt"
-	"math"
 	"reflect"
 	"strings"
-	"time"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 type Order string
@@ -93,15 +91,9 @@ func CompositeSortScopeFunc(comparator Comparator, columns ...string) func(value
 				nonNilValues = append(nonNilValues, values[i])
 				queryValues = append(queryValues, nonNilValues...)
 			}
-			return db.Where(strings.Join(queries, " OR "), queryValues...)
+			return db.Where("("+strings.Join(queries, " OR ")+")", queryValues...)
 		}
 	}
-}
-
-func unixToTime(unix float64) *time.Time {
-	sec, decimal := math.Modf(unix)
-	t := time.Unix(int64(sec), int64(decimal*1e9))
-	return &t
 }
 
 func toSnake(str string) string {

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 type cursorModel struct {
@@ -80,38 +80,38 @@ func TestParseCursorString(t *testing.T) {
 	ti, err := time.Parse(format, "2020-04-01T02:03:04.250")
 	assertNoError(t, err)
 
-	gt, ga := ParseCursorString("1585706584.25")
-	assertEqual(t, gt.UnixNano(), ti.UnixNano())
-	assertEqual(t, len(ga), 0)
-
-	gt, ga = ParseCursorString("1585706584.25_20")
-	assertEqual(t, gt.UnixNano(), ti.UnixNano())
+	ga := ParseCursorString("1585706584.25")
 	assertEqual(t, len(ga), 1)
-	assertEqual(t, ga[0], int64(20))
+	assertEqual(t, ga[0].Time().UnixNano(), ti.UnixNano())
+
+	ga = ParseCursorString("1585706584.25_20")
+	assertEqual(t, len(ga), 2)
+	assertEqual(t, ga[0].Time().UnixNano(), ti.UnixNano())
+	assertEqual(t, ga[1].Int64(), int64(20))
 
 	ti, err = time.Parse(format, "2020-04-01T02:03:04")
 	assertNoError(t, err)
 
-	gt, ga = ParseCursorString("1585706584")
-	assertEqual(t, gt.UnixNano(), ti.UnixNano())
-	assertEqual(t, len(ga), 0)
-
-	gt, ga = ParseCursorString("1585706584_20")
-	assertEqual(t, gt.UnixNano(), ti.UnixNano())
+	ga = ParseCursorString("1585706584")
 	assertEqual(t, len(ga), 1)
-	assertEqual(t, ga[0], int64(20))
+	assertEqual(t, ga[0].Int64(), int64(1585706584))
 
-	gt, ga = ParseCursorString("_1")
-	assertEqual(t, gt, (*time.Time)(nil))
-	assertEqual(t, len(ga), 1)
-	assertEqual(t, ga[0], int64(1))
+	ga = ParseCursorString("1585706584_20")
+	assertEqual(t, len(ga), 2)
+	assertEqual(t, ga[0].Time().UnixNano(), ti.UnixNano())
+	assertEqual(t, ga[1].Int64(), int64(20))
 
-	gt, ga = ParseCursorString("_1__2")
-	assertEqual(t, gt, (*time.Time)(nil))
-	assertEqual(t, len(ga), 3)
-	assertEqual(t, ga[0], int64(1))
-	assertEqual(t, ga[1], nil)
-	assertEqual(t, ga[2], int64(2))
+	ga = ParseCursorString("_1")
+	assertEqual(t, len(ga), 2)
+	assertEqual(t, ga[0].Time(), (*time.Time)(nil))
+	assertEqual(t, ga[1].Int64(), int64(1))
+
+	ga = ParseCursorString("_1__2")
+	assertEqual(t, len(ga), 4)
+	assertEqual(t, ga[0].Time(), (*time.Time)(nil))
+	assertEqual(t, ga[1].Int64(), int64(1))
+	assertEqual(t, ga[2].IsNil(), true)
+	assertEqual(t, ga[3].Int64(), int64(2))
 }
 
 func TestCursorValidate(t *testing.T) {
@@ -147,8 +147,8 @@ func TestCursorValidate(t *testing.T) {
 
 func TestCursorPaginateDESC(t *testing.T) {
 	db := openDB()
-	assertNoError(t, db.DropTableIfExists(&cursorModel{}).Error)
-	assertNoError(t, db.AutoMigrate(&cursorModel{}).Error)
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
 
 	baseUrl, err := url.Parse("https://example.com/users?a=1")
 	assertNoError(t, err)
@@ -167,7 +167,7 @@ func TestCursorPaginateDESC(t *testing.T) {
 
 	model1 := create(now)
 	model2 := create(now)
-	model3 := create(now.Add(10 * time.Millisecond))
+	model3 := create(now.Add(10 * time.Second))
 	model4 := create(now.Add(10 * time.Hour))
 
 	var models []*cursorModel
@@ -226,8 +226,8 @@ func TestCursorPaginateDESC(t *testing.T) {
 
 func TestCursorPaginateASC(t *testing.T) {
 	db := openDB()
-	assertNoError(t, db.DropTableIfExists(&cursorModel{}).Error)
-	assertNoError(t, db.AutoMigrate(&cursorModel{}).Error)
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
 
 	baseUrl, err := url.Parse("https://example.com/users?a=1")
 	assertNoError(t, err)
@@ -246,7 +246,7 @@ func TestCursorPaginateASC(t *testing.T) {
 
 	model1 := create(now)
 	model2 := create(now)
-	model3 := create(now.Add(10 * time.Millisecond))
+	model3 := create(now.Add(10 * time.Second))
 	model4 := create(now.Add(10 * time.Hour))
 
 	var models []*cursorModel
@@ -305,8 +305,8 @@ func TestCursorPaginateASC(t *testing.T) {
 
 func TestCursorPaginateWithBeforeDESC(t *testing.T) {
 	db := openDB()
-	assertNoError(t, db.DropTableIfExists(&cursorModel{}).Error)
-	assertNoError(t, db.AutoMigrate(&cursorModel{}).Error)
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
 
 	baseUrl, err := url.Parse("https://example.com/users?a=1")
 	assertNoError(t, err)
@@ -326,7 +326,7 @@ func TestCursorPaginateWithBeforeDESC(t *testing.T) {
 
 	model1 := create(now)
 	model2 := create(now)
-	model3 := create(now.Add(10 * time.Millisecond))
+	model3 := create(now.Add(10 * time.Second))
 	model4 := create(now.Add(10 * time.Hour))
 
 	var models []*cursorModel
@@ -368,8 +368,8 @@ func TestCursorPaginateWithBeforeDESC(t *testing.T) {
 
 func TestCursorPaginateWithBeforeASC(t *testing.T) {
 	db := openDB()
-	assertNoError(t, db.DropTableIfExists(&cursorModel{}).Error)
-	assertNoError(t, db.AutoMigrate(&cursorModel{}).Error)
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
 
 	baseUrl, err := url.Parse("https://example.com/users?a=1")
 	assertNoError(t, err)
@@ -389,7 +389,7 @@ func TestCursorPaginateWithBeforeASC(t *testing.T) {
 
 	model1 := create(now)
 	model2 := create(now)
-	model3 := create(now.Add(10 * time.Millisecond))
+	model3 := create(now.Add(10 * time.Second))
 	model4 := create(now.Add(10 * time.Hour))
 
 	var models []*cursorModel
@@ -433,8 +433,8 @@ func TestCursorPaginateWithBeforeASC(t *testing.T) {
 
 func TestCursorPaginateWithAfterDESC(t *testing.T) {
 	db := openDB()
-	assertNoError(t, db.DropTableIfExists(&cursorModel{}).Error)
-	assertNoError(t, db.AutoMigrate(&cursorModel{}).Error)
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
 
 	baseUrl, err := url.Parse("https://example.com/users?a=1")
 	assertNoError(t, err)
@@ -453,8 +453,8 @@ func TestCursorPaginateWithAfterDESC(t *testing.T) {
 	}
 
 	model1 := create(now)
-	model2 := create(now.Add(10 * time.Millisecond))
-	model3 := create(now.Add(10 * time.Millisecond))
+	model2 := create(now.Add(10 * time.Second))
+	model3 := create(now.Add(10 * time.Second))
 	model4 := create(now.Add(10 * time.Hour))
 
 	var models []*cursorModel
@@ -498,8 +498,8 @@ func TestCursorPaginateWithAfterDESC(t *testing.T) {
 
 func TestCursorPaginateWithAfterASC(t *testing.T) {
 	db := openDB()
-	assertNoError(t, db.DropTableIfExists(&cursorModel{}).Error)
-	assertNoError(t, db.AutoMigrate(&cursorModel{}).Error)
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
 
 	baseUrl, err := url.Parse("https://example.com/users?a=1")
 	assertNoError(t, err)
@@ -518,8 +518,8 @@ func TestCursorPaginateWithAfterASC(t *testing.T) {
 	}
 
 	model1 := create(now)
-	model2 := create(now.Add(10 * time.Millisecond))
-	model3 := create(now.Add(10 * time.Millisecond))
+	model2 := create(now.Add(10 * time.Second))
+	model3 := create(now.Add(10 * time.Second))
 	model4 := create(now.Add(10 * time.Hour))
 
 	var models []*cursorModel
@@ -561,8 +561,8 @@ func TestCursorPaginateWithAfterASC(t *testing.T) {
 
 func TestCursorPaginateWithAfterAndBeforeDESC(t *testing.T) {
 	db := openDB()
-	assertNoError(t, db.DropTableIfExists(&cursorModel{}).Error)
-	assertNoError(t, db.AutoMigrate(&cursorModel{}).Error)
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
 
 	baseUrl, err := url.Parse("https://example.com/users?a=1")
 	assertNoError(t, err)
@@ -581,8 +581,8 @@ func TestCursorPaginateWithAfterAndBeforeDESC(t *testing.T) {
 	}
 
 	model1 := create(now)
-	model2 := create(now.Add(10 * time.Millisecond))
-	model3 := create(now.Add(10 * time.Millisecond))
+	model2 := create(now.Add(10 * time.Second))
+	model3 := create(now.Add(10 * time.Second))
 	model4 := create(now.Add(10 * time.Hour))
 	model5 := create(now.Add(10 * time.Hour))
 
@@ -627,8 +627,8 @@ func TestCursorPaginateWithAfterAndBeforeDESC(t *testing.T) {
 
 func TestCursorPaginateWithAfterAndBeforeASC(t *testing.T) {
 	db := openDB()
-	assertNoError(t, db.DropTableIfExists(&cursorModel{}).Error)
-	assertNoError(t, db.AutoMigrate(&cursorModel{}).Error)
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
 
 	baseUrl, err := url.Parse("https://example.com/users?a=1")
 	assertNoError(t, err)
@@ -647,8 +647,8 @@ func TestCursorPaginateWithAfterAndBeforeASC(t *testing.T) {
 	}
 
 	model1 := create(now)
-	model2 := create(now.Add(10 * time.Millisecond))
-	model3 := create(now.Add(10 * time.Millisecond))
+	model2 := create(now.Add(10 * time.Second))
+	model3 := create(now.Add(10 * time.Second))
 	model4 := create(now.Add(10 * time.Hour))
 	model5 := create(now.Add(10 * time.Hour))
 
@@ -694,8 +694,8 @@ func TestCursorPaginateWithAfterAndBeforeASC(t *testing.T) {
 
 func TestCursorPaginateWithEmpty(t *testing.T) {
 	db := openDB()
-	assertNoError(t, db.DropTableIfExists(&cursorModel{}).Error)
-	assertNoError(t, db.AutoMigrate(&cursorModel{}).Error)
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
 
 	var models []*cursorModel
 	cursor := &Cursor{
@@ -710,8 +710,8 @@ func TestCursorPaginateWithEmpty(t *testing.T) {
 
 func TestCursorPaginateWithNullableTimeDESC(t *testing.T) {
 	db := openDB()
-	assertNoError(t, db.DropTableIfExists(&cursorModel{}).Error)
-	assertNoError(t, db.AutoMigrate(&cursorModel{}).Error)
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
 
 	now := time.Now()
 
@@ -766,8 +766,8 @@ func TestCursorPaginateWithNullableTimeDESC(t *testing.T) {
 
 func TestCursorPaginateWithNullableTimeASC(t *testing.T) {
 	db := openDB()
-	assertNoError(t, db.DropTableIfExists(&cursorModel{}).Error)
-	assertNoError(t, db.AutoMigrate(&cursorModel{}).Error)
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
 
 	now := time.Now()
 
