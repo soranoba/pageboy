@@ -114,6 +114,7 @@ func toSnake(str string) string {
 			if p+1 < i {
 				tmp := append([]rune{'_'}, runes[i:]...)
 				runes = append(runes[0:i], tmp...)
+				i++
 			}
 			p = i
 		}
