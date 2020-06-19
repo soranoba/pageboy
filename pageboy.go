@@ -3,6 +3,7 @@ package pageboy
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"strings"
 	"time"
 
@@ -50,6 +51,7 @@ func CompositeSortScopeFunc(comparator Comparator, columns ...string) func(value
 	return func(values ...interface{}) func(*gorm.DB) *gorm.DB {
 		return func(db *gorm.DB) *gorm.DB {
 			queryValues := make([]interface{}, 0)
+			nonNilValues := make([]interface{}, 0)
 			queries := make([]string, 0)
 			var eqQuery string
 
@@ -60,20 +62,36 @@ func CompositeSortScopeFunc(comparator Comparator, columns ...string) func(value
 				return len(values)
 			})()
 
+		Loop:
 			for i, column := range columns[:length] {
 				column = toSnake(column)
+
+				val := reflect.ValueOf(values[i])
+				isNil := val.Kind() == reflect.Ptr && val.IsNil()
+
 				switch comparator {
 				case LessThan:
-					query := fmt.Sprintf("(%s(%s IS NULL OR %s %s ?))", eqQuery, column, column, comparator)
-					queries = append(queries, query)
+					if isNil {
+						eqQuery += fmt.Sprintf("%s IS NULL AND ", column)
+						continue Loop
+					} else {
+						query := fmt.Sprintf("(%s(%s IS NULL OR %s %s ?))", eqQuery, column, column, comparator)
+						queries = append(queries, query)
+					}
 				case GreaterThan:
-					query := fmt.Sprintf("(%s%s %s ?)", eqQuery, column, comparator)
-					queries = append(queries, query)
+					if isNil {
+						continue Loop
+					} else {
+						query := fmt.Sprintf("(%s%s %s ?)", eqQuery, column, comparator)
+						queries = append(queries, query)
+					}
 				default:
 					panic("Unsupported compareStr")
 				}
-				queryValues = append(queryValues, values[:i+1]...)
+
 				eqQuery += fmt.Sprintf("%s = ? AND ", column)
+				nonNilValues = append(nonNilValues, values[i])
+				queryValues = append(queryValues, nonNilValues...)
 			}
 			return db.Where(strings.Join(queries, " OR "), queryValues...)
 		}

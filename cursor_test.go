@@ -100,6 +100,18 @@ func TestParseCursorString(t *testing.T) {
 	assertEqual(t, gt.UnixNano(), ti.UnixNano())
 	assertEqual(t, len(ga), 1)
 	assertEqual(t, ga[0], int64(20))
+
+	gt, ga = ParseCursorString("_1")
+	assertEqual(t, gt, (*time.Time)(nil))
+	assertEqual(t, len(ga), 1)
+	assertEqual(t, ga[0], int64(1))
+
+	gt, ga = ParseCursorString("_1__2")
+	assertEqual(t, gt, (*time.Time)(nil))
+	assertEqual(t, len(ga), 3)
+	assertEqual(t, ga[0], int64(1))
+	assertEqual(t, ga[1], nil)
+	assertEqual(t, ga[2], int64(2))
 }
 
 func TestCursorValidate(t *testing.T) {
@@ -680,7 +692,23 @@ func TestCursorPaginateWithAfterAndBeforeASC(t *testing.T) {
 	})
 }
 
-func TestCursorPaginateWithNullableTime(t *testing.T) {
+func TestCursorPaginateWithEmpty(t *testing.T) {
+	db := openDB()
+	assertNoError(t, db.DropTableIfExists(&cursorModel{}).Error)
+	assertNoError(t, db.AutoMigrate(&cursorModel{}).Error)
+
+	var models []*cursorModel
+	cursor := &Cursor{
+		Order: DESC,
+		Limit: 1,
+	}
+	assertNoError(t, db.Scopes(cursor.Paginate("Time", "ID")).Find(&models).Error)
+	assertEqual(t, len(models), 0)
+	assertEqual(t, cursor.GetNextAfter(), "_0")
+	assertEqual(t, cursor.GetNextBefore(), "_0")
+}
+
+func TestCursorPaginateWithNullableTimeDESC(t *testing.T) {
 	db := openDB()
 	assertNoError(t, db.DropTableIfExists(&cursorModel{}).Error)
 	assertNoError(t, db.AutoMigrate(&cursorModel{}).Error)
@@ -696,9 +724,10 @@ func TestCursorPaginateWithNullableTime(t *testing.T) {
 	}
 
 	model1 := create(nil)
-	model2 := create(&now)
-	model3Time := now.Add(10 * time.Second)
-	model3 := create(&model3Time)
+	model2 := create(nil)
+	model3 := create(&now)
+	model4Time := now.Add(10 * time.Second)
+	model4 := create(&model4Time)
 
 	var models []*cursorModel
 	cursor := &Cursor{
@@ -707,9 +736,9 @@ func TestCursorPaginateWithNullableTime(t *testing.T) {
 	}
 	assertNoError(t, db.Scopes(cursor.Paginate("Time", "ID")).Find(&models).Error)
 	assertEqual(t, len(models), 1)
-	assertEqual(t, models[0].ID, model3.ID)
-	assertEqual(t, cursor.GetNextAfter(), FormatCursorString(models[0].Time, model3.ID))
-	assertEqual(t, cursor.GetNextBefore(), FormatCursorString(models[0].Time, model3.ID))
+	assertEqual(t, models[0].ID, model4.ID)
+	assertEqual(t, cursor.GetNextAfter(), FormatCursorString(models[0].Time, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), FormatCursorString(models[0].Time, models[0].ID))
 
 	cursor = &Cursor{
 		Before: cursor.GetNextBefore(),
@@ -718,8 +747,75 @@ func TestCursorPaginateWithNullableTime(t *testing.T) {
 	}
 	assertNoError(t, db.Scopes(cursor.Paginate("Time", "ID")).Find(&models).Error)
 	assertEqual(t, len(models), 2)
-	assertEqual(t, models[0].ID, model2.ID)
-	assertEqual(t, models[1].ID, model1.ID)
+	assertEqual(t, models[0].ID, model3.ID)
+	assertEqual(t, models[1].ID, model2.ID)
 	assertEqual(t, cursor.GetNextAfter(), FormatCursorString(models[0].Time, models[0].ID))
 	assertEqual(t, cursor.GetNextBefore(), FormatCursorString(models[1].Time, models[1].ID))
+
+	cursor = &Cursor{
+		Before: cursor.GetNextBefore(),
+		Order:  DESC,
+		Limit:  2,
+	}
+	assertNoError(t, db.Scopes(cursor.Paginate("Time", "ID")).Find(&models).Error)
+	assertEqual(t, len(models), 1)
+	assertEqual(t, models[0].ID, model1.ID)
+	assertEqual(t, cursor.GetNextAfter(), FormatCursorString(models[0].Time, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), FormatCursorString(models[0].Time, models[0].ID))
+}
+
+func TestCursorPaginateWithNullableTimeASC(t *testing.T) {
+	db := openDB()
+	assertNoError(t, db.DropTableIfExists(&cursorModel{}).Error)
+	assertNoError(t, db.AutoMigrate(&cursorModel{}).Error)
+
+	now := time.Now()
+
+	create := func(ti *time.Time) *cursorModel {
+		model := &cursorModel{
+			Time: ti,
+		}
+		assertNoError(t, db.Create(model).Error)
+		return model
+	}
+
+	model1 := create(nil)
+	model2 := create(nil)
+	model3 := create(&now)
+	model4Time := now.Add(10 * time.Second)
+	model4 := create(&model4Time)
+
+	var models []*cursorModel
+	cursor := &Cursor{
+		Order: ASC,
+		Limit: 1,
+	}
+	assertNoError(t, db.Scopes(cursor.Paginate("Time", "ID")).Find(&models).Error)
+	assertEqual(t, len(models), 1)
+	assertEqual(t, models[0].ID, model1.ID)
+	assertEqual(t, cursor.GetNextBefore(), FormatCursorString(models[0].Time, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), FormatCursorString(models[0].Time, models[0].ID))
+
+	cursor = &Cursor{
+		After: cursor.GetNextAfter(),
+		Order: ASC,
+		Limit: 2,
+	}
+	assertNoError(t, db.Scopes(cursor.Paginate("Time", "ID")).Find(&models).Error)
+	assertEqual(t, len(models), 2)
+	assertEqual(t, models[0].ID, model2.ID)
+	assertEqual(t, models[1].ID, model3.ID)
+	assertEqual(t, cursor.GetNextBefore(), FormatCursorString(models[0].Time, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), FormatCursorString(models[1].Time, models[1].ID))
+
+	cursor = &Cursor{
+		After: cursor.GetNextAfter(),
+		Order: ASC,
+		Limit: 2,
+	}
+	assertNoError(t, db.Scopes(cursor.Paginate("Time", "ID")).Find(&models).Error)
+	assertEqual(t, len(models), 1)
+	assertEqual(t, models[0].ID, model4.ID)
+	assertEqual(t, cursor.GetNextBefore(), FormatCursorString(models[0].Time, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), FormatCursorString(models[0].Time, models[0].ID))
 }

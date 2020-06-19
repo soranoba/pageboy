@@ -356,23 +356,28 @@ func cursorHandleQuery(scope *gorm.Scope) {
 			cursor.nextBefore = getCursorStringFromColumns(results.Index(length-1), columns...)
 		}
 	} else {
+		ty := results.Type().Elem()
+		if ty.Kind() == reflect.Ptr {
+			ty = ty.Elem()
+		}
+
 		if cursor.After != "" {
 			cursor.nextAfter = cursor.After
 		} else {
-			cursor.nextAfter = getCursorStringFromColumns(reflect.New(results.Type().Elem()), columns...)
+			cursor.nextAfter = getCursorStringFromColumns(reflect.New(ty), columns...)
 		}
 
 		if cursor.Before != "" {
 			cursor.nextBefore = cursor.Before
 		} else {
-			cursor.nextBefore = getCursorStringFromColumns(reflect.New(results.Type().Elem()), columns...)
+			cursor.nextBefore = getCursorStringFromColumns(reflect.New(ty), columns...)
 		}
 	}
 }
 
 func getCursorStringFromColumns(value reflect.Value, columns ...string) string {
 	value = reflect.Indirect(value)
-	if !(value.Kind() == reflect.Struct && value.Kind() == reflect.Struct) {
+	if !(value.Kind() == reflect.Struct) {
 		panic("Find result is not a struct or an array of struct.")
 	}
 	if len(columns) == 0 {
