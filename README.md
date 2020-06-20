@@ -4,19 +4,19 @@ pageboy
 [![Go Report Card](https://goreportcard.com/badge/github.com/soranoba/pageboy)](https://goreportcard.com/report/github.com/soranoba/pageboy)
 [![GoDoc](https://godoc.org/github.com/soranoba/pageboy?status.svg)](https://godoc.org/github.com/soranoba/pageboy)
 
-`pageboy` is a [GORM](https://github.com/go-gorm/gorm) pagination library.
+`pageboy` is a [GORM v2](https://github.com/go-gorm/gorm) pagination library.
 
 ## Features
 
-- It support before/after (timebase) pagination with GORM
-- It support page/per pagination with GORM
+- It support before/after (timebase) pagination with GORM v2
+- It support page/per pagination with GORM v2
 
 ## Usage
 
 ### Cursor
 
-Cursor is sort using by time.<br>
-If you sort using CreatedAt, you can prevent duplicate elements from occurring.
+Cursor is sort using by time or number.<br>
+If you sort using CreatedAt and ID, you can prevent duplicate elements from occurring.
 
 #### Query Formats
 
