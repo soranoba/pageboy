@@ -40,6 +40,7 @@ type CursorPagingUrls struct {
 	After  string `json:"after,omitempty"`
 }
 
+// CursorSegment is a result of parsing each element of cursor
 type CursorSegment struct {
 	integer int64
 	nano    int64
@@ -48,14 +49,17 @@ type CursorSegment struct {
 
 type CursorSegments []CursorSegment
 
+// IsNil returns true if it have nil value. Otherwise, it returns false.
 func (seg CursorSegment) IsNil() bool {
 	return seg.isNil
 }
 
+// Int64 returns converted to integer.
 func (seg CursorSegment) Int64() int64 {
 	return seg.integer
 }
 
+// Time returns converted to time.
 func (seg CursorSegment) Time() *time.Time {
 	if seg.isNil {
 		return nil
@@ -64,6 +68,7 @@ func (seg CursorSegment) Time() *time.Time {
 	return &t
 }
 
+// Interface returns converted to the type of the specified column.
 func (seg CursorSegment) Interface(ty reflect.Type, column string) interface{} {
 	assert(ty.Kind() == reflect.Struct, "model must be struct")
 	field, ok := ty.FieldByName(column)
@@ -78,6 +83,7 @@ func (seg CursorSegment) Interface(ty reflect.Type, column string) interface{} {
 	return seg.Int64()
 }
 
+// Interface returns converted to types of specified columns.
 func (segs CursorSegments) Interface(ty reflect.Type, columns ...string) []interface{} {
 	assert(len(segs) == len(columns), "invalid number of columns")
 
