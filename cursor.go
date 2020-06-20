@@ -236,7 +236,9 @@ func FormatCursorString(args ...interface{}) string {
 				return strconv.FormatUint(v.Convert(ui64t).Interface().(uint64), 10)
 			} else if v.Type().ConvertibleTo(tit) {
 				t := v.Convert(tit).Interface().(time.Time)
-				s := strconv.FormatInt(t.Unix(), 10) + "." + strconv.Itoa(t.Nanosecond())
+				s := strconv.FormatInt(t.Unix(), 10)
+				nano := strconv.Itoa(t.Nanosecond())
+				s += "." + strings.Repeat("0", 9-len(nano)) + nano
 				s = strings.TrimRight(s, "0")
 				s = strings.TrimRight(s, ".")
 				return s

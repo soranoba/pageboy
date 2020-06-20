@@ -3,7 +3,7 @@ build:
 	go build
 
 test:
-	go test ./...
+	go test ./... -count=1
 
 format:
 	gofmt -w ./

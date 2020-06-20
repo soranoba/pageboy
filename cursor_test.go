@@ -42,13 +42,13 @@ func TestFormatCursorString(t *testing.T) {
 	var id1 uint = 20
 	var id2 int = 10
 
-	format := "2006-01-02T15:04:05.999"
-	ti, err := time.Parse(format, "2020-04-01T02:03:04.250")
+	format := "2006-01-02T15:04:05.9999"
+	ti, err := time.Parse(format, "2020-04-01T02:03:04.0250")
 	assertNoError(t, err)
-	assertEqual(t, FormatCursorString(&ti), "1585706584.25")
-	assertEqual(t, FormatCursorString(&ti, id1), "1585706584.25_20")
-	assertEqual(t, FormatCursorString(&ti, &id1), "1585706584.25_20")
-	assertEqual(t, FormatCursorString(&ti, id1, id2), "1585706584.25_20_10")
+	assertEqual(t, FormatCursorString(&ti), "1585706584.025")
+	assertEqual(t, FormatCursorString(&ti, id1), "1585706584.025_20")
+	assertEqual(t, FormatCursorString(&ti, &id1), "1585706584.025_20")
+	assertEqual(t, FormatCursorString(&ti, id1, id2), "1585706584.025_20_10")
 
 	ti, err = time.Parse(format, "2020-04-01T02:03:04")
 	assertNoError(t, err)
@@ -76,15 +76,15 @@ func TestValidateCursorString(t *testing.T) {
 }
 
 func TestParseCursorString(t *testing.T) {
-	format := "2006-01-02T15:04:05.999"
-	ti, err := time.Parse(format, "2020-04-01T02:03:04.250")
+	format := "2006-01-02T15:04:05.9999"
+	ti, err := time.Parse(format, "2020-04-01T02:03:04.0250")
 	assertNoError(t, err)
 
-	ga := ParseCursorString("1585706584.25")
+	ga := ParseCursorString("1585706584.025")
 	assertEqual(t, len(ga), 1)
 	assertEqual(t, ga[0].Time().UnixNano(), ti.UnixNano())
 
-	ga = ParseCursorString("1585706584.25_20")
+	ga = ParseCursorString("1585706584.025_20")
 	assertEqual(t, len(ga), 2)
 	assertEqual(t, ga[0].Time().UnixNano(), ti.UnixNano())
 	assertEqual(t, ga[1].Int64(), int64(20))
@@ -129,10 +129,10 @@ func TestCursorValidate(t *testing.T) {
 	cursor = &Cursor{Before: "1585706584", After: "1585706584", Limit: -1, Order: DESC}
 	assertError(t, cursor.Validate())
 
-	cursor = &Cursor{Before: "1585706584.25_20", After: "", Limit: 10, Order: DESC}
+	cursor = &Cursor{Before: "1585706584.025_20", After: "", Limit: 10, Order: DESC}
 	assertNoError(t, cursor.Validate())
 
-	cursor = &Cursor{Before: "", After: "1585706584.25_20", Limit: 10, Order: DESC}
+	cursor = &Cursor{Before: "", After: "1585706584.025_20", Limit: 10, Order: DESC}
 	assertNoError(t, cursor.Validate())
 
 	cursor = &Cursor{Before: "1585706584", After: "1585706584", Limit: 10, Order: DESC}
