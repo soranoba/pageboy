@@ -144,7 +144,7 @@ func (cursor *Cursor) BuildNextPagingUrls(base *url.URL) *CursorPagingUrls {
 	if cursor.hasMore {
 		baseUrl := *base
 		query := baseUrl.Query()
-		if cursor.baseOrder == ASC {
+		if (cursor.baseOrder == ASC) != cursor.Reverse {
 			query.Del("after")
 			query.Add("after", cursor.nextAfter)
 		} else {
@@ -418,7 +418,7 @@ func cursorHandleQuery(db *gorm.DB) {
 
 	length := results.Len()
 	if length > 0 {
-		if cursor.baseOrder == ASC {
+		if (cursor.baseOrder == ASC) != cursor.Reverse {
 			cursor.nextAfter = getCursorStringFromColumns(results.Index(length-1), cursor.columns...)
 			cursor.nextBefore = getCursorStringFromColumns(results.Index(0), cursor.columns...)
 		} else {
