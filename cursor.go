@@ -189,9 +189,7 @@ func (cursor *Cursor) BuildNextPagingUrls(base *url.URL) *CursorPagingUrls {
 //
 //   db.Scopes(cursor.Paginate("CreatedAt", "ID")).Find(&models)
 //
-func (cursor *Cursor) Paginate(timeColumn string, columns ...string) func(db *gorm.DB) *gorm.DB {
-	columns = append([]string{timeColumn}, columns...)
-
+func (cursor *Cursor) Paginate(columns ...string) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		registerCursorCallbacks(db)
 		db = db.InstanceSet("pageboy:columns", columns).
@@ -463,10 +461,8 @@ func getCursorStringFromColumns(value reflect.Value, columns ...string) string {
 }
 
 func registerCursorCallbacks(db *gorm.DB) {
-	db.Callback().Query().Before("gorm:query").
-		Replace("pageboy:cursor:before_query", cursorHandleBeforeQuery)
-	db.Callback().Query().After("gorm:query").
-		Replace("pageboy:cursor:after_query", cursorHandleAfterQuery)
-	db.Callback().Query().
-		Replace("pageboy:cursor:handle_query", cursorHandleQuery)
+	q := db.Callback().Query()
+	q.Before("gorm:query").Replace("pageboy:cursor:before_query", cursorHandleBeforeQuery)
+	q.After("gorm:query").Replace("pageboy:cursor:after_query", cursorHandleAfterQuery)
+	q.Replace("pageboy:cursor:handle_query", cursorHandleQuery)
 }

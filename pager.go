@@ -83,6 +83,6 @@ func pagerHandleBeforeQuery(db *gorm.DB) {
 }
 
 func registerPagerCallbacks(db *gorm.DB) {
-	db.Callback().Query().Before("gorm:query").
-		Replace("pageboy:pager:before_query", pagerHandleBeforeQuery)
+	q := db.Callback().Query()
+	q.Before("gorm:query").Replace("pageboy:pager:before_query", pagerHandleBeforeQuery)
 }
