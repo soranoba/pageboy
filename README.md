@@ -8,7 +8,7 @@ pageboy
 
 ## Features
 
-- It support before/after (timebase) pagination with GORM v2
+- It support before/after pagination with GORM v2
 - It support page/per pagination with GORM v2
 
 ## Usage
@@ -47,7 +47,7 @@ type UsersRequest struct {
 
 func getUsers(ctx echo.Context) error {
 	// Set to Default Limit
-	req := &UsersRequest{Cursor: pageboy.Cursor{Limit: 10, Order: pageboy.DESC}}
+	req := &UsersRequest{Cursor: pageboy.Cursor{Limit: 10}}
 	// Read from query or body
 	if err := ctx.Bind(req); err != nil {
 		return err
@@ -58,7 +58,7 @@ func getUsers(ctx echo.Context) error {
 	}
 	// Read from DB
 	var users []*User
-	if err := db.Scopes(req.Cursor.Paginate("CreatedAt", "ID")).Find(&users).Error; err != nil {
+	if err := db.Scopes(req.Cursor.Paginate("CreatedAt", "ID").Order("DESC", "DESC").Scope()).Find(&users).Error; err != nil {
 		return err
 	}
 }
@@ -94,7 +94,7 @@ func getUsers(ctx echo.Context) error {
 	}
 	// Read from DB
 	var users []*User
-	if err := db.Scopes(req.Pager.Paginate()).Order("id ASC").Find(&users).Error; err != nil {
+	if err := db.Scopes(req.Pager.Scope()).Order("id ASC").Find(&users).Error; err != nil {
 		return err
 	}
 }
