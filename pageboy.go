@@ -26,16 +26,30 @@ const (
 //
 // Examples:
 //
-//   CompositeOrder(DESC, "CreatedAt", "ID")
+//   CompositeOrder("CreatedAt", "ID")(DESC, ASC)
 //
-func CompositeOrder(order Order, columns ...string) string {
-	assert(order != "", "order MUST NOT empty string")
+func CompositeOrder(columns ...string) func(orders ...Order) string {
+	return func(orders ...Order) string {
+		assert(len(columns) == len(orders), "columns and orders must have the same length")
 
-	orders := make([]string, len(columns))
-	for i, column := range columns {
-		orders[i] = fmt.Sprintf("%s %s", toSnake(column), strings.ToUpper(string(order)))
+		parts := make([]string, len(columns))
+		for i, column := range columns {
+			parts[i] = fmt.Sprintf("%s %s", toSnake(column), strings.ToUpper(string(orders[i])))
+		}
+		return strings.Join(parts, ", ")
 	}
-	return strings.Join(orders, ", ")
+}
+
+func ReverseOrders(orders ...Order) []Order {
+	newOrders := make([]Order, len(orders))
+	for i := 0; i < len(orders); i++ {
+		if orders[i] == ASC {
+			newOrders[i] = DESC
+		} else {
+			newOrders[i] = ASC
+		}
+	}
+	return newOrders
 }
 
 // CompositeSortScopeFunc returns a function that create a scope for the gorm.
@@ -43,55 +57,68 @@ func CompositeOrder(order Order, columns ...string) string {
 //
 // Examples:
 //
-//   CompositeSortScopeFunc(GreaterThan, "CreatedAt", "ID")(time, id)
+//   CompositeSortScopeFunc("CreatedAt", "ID")(GreaterThan, LessThan)(time, id)
 //
-func CompositeSortScopeFunc(comparator Comparator, columns ...string) func(values ...interface{}) func(*gorm.DB) *gorm.DB {
-	return func(values ...interface{}) func(*gorm.DB) *gorm.DB {
-		return func(db *gorm.DB) *gorm.DB {
-			queryValues := make([]interface{}, 0)
-			nonNilValues := make([]interface{}, 0)
-			queries := make([]string, 0)
-			var eqQuery string
+func CompositeSortScopeFunc(columns ...string) func(comparators ...Comparator) func(values ...interface{}) func(*gorm.DB) *gorm.DB {
+	return func(comparators ...Comparator) func(values ...interface{}) func(*gorm.DB) *gorm.DB {
+		assert(len(columns) == len(comparators), "columns and comparators must have the same length")
 
-			var length = (func() int {
-				if len(values) > len(columns) {
-					return len(columns)
-				}
-				return len(values)
-			})()
+		return func(values ...interface{}) func(*gorm.DB) *gorm.DB {
+			return func(db *gorm.DB) *gorm.DB {
+				queryValues := make([]interface{}, 0)
+				nonNilValues := make([]interface{}, 0)
+				queries := make([]string, 0)
+				var eqQuery string
 
-		Loop:
-			for i, column := range columns[:length] {
-				column = toSnake(column)
-
-				val := reflect.ValueOf(values[i])
-				isNil := val.Kind() == reflect.Ptr && val.IsNil()
-
-				switch comparator {
-				case LessThan:
-					if isNil {
-						eqQuery += fmt.Sprintf("%s IS NULL AND ", column)
-						continue Loop
-					} else {
-						query := fmt.Sprintf("(%s(%s IS NULL OR %s %s ?))", eqQuery, column, column, comparator)
-						queries = append(queries, query)
+				var length = (func() int {
+					if len(values) > len(columns) {
+						return len(columns)
 					}
-				case GreaterThan:
-					if isNil {
-						continue Loop
+					return len(values)
+				})()
+
+				comparators = comparators[0:length]
+				for i := len(comparators); i < length; i++ {
+					if i == 0 {
+						comparators = append(comparators, GreaterThan)
 					} else {
-						query := fmt.Sprintf("(%s%s %s ?)", eqQuery, column, comparator)
-						queries = append(queries, query)
+						comparators = append(comparators, comparators[i-1])
 					}
-				default:
-					panic("Unsupported compareStr")
 				}
 
-				eqQuery += fmt.Sprintf("%s = ? AND ", column)
-				nonNilValues = append(nonNilValues, values[i])
-				queryValues = append(queryValues, nonNilValues...)
+			Loop:
+				for i, column := range columns[:length] {
+					column = toSnake(column)
+
+					val := reflect.ValueOf(values[i])
+					isNil := val.Kind() == reflect.Ptr && val.IsNil()
+
+					switch comparators[i] {
+					case LessThan:
+						if isNil {
+							eqQuery += fmt.Sprintf("%s IS NULL AND ", column)
+							continue Loop
+						} else {
+							query := fmt.Sprintf("(%s(%s IS NULL OR %s %s ?))", eqQuery, column, column, comparators[i])
+							queries = append(queries, query)
+						}
+					case GreaterThan:
+						if isNil {
+							continue Loop
+						} else {
+							query := fmt.Sprintf("(%s%s %s ?)", eqQuery, column, comparators[i])
+							queries = append(queries, query)
+						}
+					default:
+						panic("Unsupported compareStr")
+					}
+
+					eqQuery += fmt.Sprintf("%s = ? AND ", column)
+					nonNilValues = append(nonNilValues, values[i])
+					queryValues = append(queryValues, nonNilValues...)
+				}
+				return db.Where("("+strings.Join(queries, " OR ")+")", queryValues...)
 			}
-			return db.Where("("+strings.Join(queries, " OR ")+")", queryValues...)
 		}
 	}
 }

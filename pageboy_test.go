@@ -11,8 +11,9 @@ import (
 )
 
 func TestCompositeOrder(t *testing.T) {
-	assertEqual(t, CompositeOrder(ASC, "ID", "CreatedAt"), "id ASC, created_at ASC")
-	assertEqual(t, CompositeOrder(DESC, "ID", "CreatedAt"), "id DESC, created_at DESC")
+	assertEqual(t, CompositeOrder("ID", "CreatedAt")("ASC", "ASC"), "id ASC, created_at ASC")
+	assertEqual(t, CompositeOrder("ID", "CreatedAt")("DESC", "DESC"), "id DESC, created_at DESC")
+	assertEqual(t, CompositeOrder("ID", "CreatedAt")("ASC", "DESC"), "id ASC, created_at DESC")
 }
 
 func TestToSnake(t *testing.T) {

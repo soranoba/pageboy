@@ -53,13 +53,13 @@ func (pager *Pager) Validate() error {
 	return nil
 }
 
-// Paginate is a scope for the gorm.
+// Scope returns a scope for the gorm.
 //
 // Example:
 //
-//   db.Scopes(pager.Paginate()).Order("id ASC").Find(&models)
+//   db.Scopes(pager.Scope()).Order("id ASC").Find(&models)
 //
-func (pager *Pager) Paginate() func(db *gorm.DB) *gorm.DB {
+func (pager *Pager) Scope() func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		registerPagerCallbacks(db)
 		db = db.InstanceSet("pageboy:pager", pager)

@@ -15,29 +15,34 @@ import (
 
 // Cursor can to get a specific range of records from DB in time order.
 //
-// When Limit is smaller than or equal to 0 or Order is empty, the validation will fail.
+// When Limit is smaller than or equal to 0, the validation will fail.
 // You should set the initial values and then read it from query or json.
 //
-//   cursor := &pageboy.Cursor{Limit: 10, Order: pageboy.DESC}
+//   cursor := &pageboy.Cursor{Limit: 10, Reverse: true}
 //   ctx.Bind(cursor)
 //
 type Cursor struct {
-	Before string `json:"before" query:"before"`
-	After  string `json:"after" query:"after"`
-	Limit  int    `json:"limit" query:"limit"`
-	Order  Order  `json:"order" query:"order" enums:"asc,desc"`
+	Before  string `json:"before" query:"before"`
+	After   string `json:"after" query:"after"`
+	Limit   int    `json:"limit" query:"limit"`
+	Reverse bool   `json:"reverse" query:"reverse"`
+
+	// See: cursor.Order
+	orders []Order
+	// See: cursor.Paginate
+	columns []string
 
 	nextBefore string
 	nextAfter  string
+	baseOrder  Order
 	limit      int
 	hasMore    bool
 }
 
 // CursorPagingUrls is for the user to access from the next cursor position.
-// If it is no records at target of before or after, it will be empty strings.
+// If it is no records at target of next, it will be empty strings.
 type CursorPagingUrls struct {
-	Before string `json:"before,omitempty"`
-	After  string `json:"after,omitempty"`
+	Next string `json:"next,omitempty"`
 }
 
 // CursorSegment is a result of parsing each element of cursor
@@ -98,7 +103,6 @@ func (segs CursorSegments) Interface(ty reflect.Type, columns ...string) []inter
 func NewCursor() *Cursor {
 	return &Cursor{
 		Limit: 10,
-		Order: DESC,
 	}
 }
 
@@ -113,9 +117,6 @@ func (cursor *Cursor) Validate() error {
 	}
 	if cursor.Limit < 1 {
 		return errors.New("The limit parameter is invalid")
-	}
-	if cursor.Order != ASC && cursor.Order != DESC {
-		return errors.New("The order parameter is invalid")
 	}
 	return nil
 }
@@ -140,65 +141,93 @@ func (cursor *Cursor) BuildNextPagingUrls(base *url.URL) *CursorPagingUrls {
 		return pagingUrls
 	}
 
-	baseUrl := *base
-
-	(func() {
-		// there are no older elements within the specified range.
-		if cursor.Order == ASC {
-			return
-		}
-		if cursor.Order == DESC && !cursor.hasMore {
-			return
-		}
-
-		if cursor.nextBefore != "" {
-			beforeUrl := baseUrl
-			query := baseUrl.Query()
-			query.Del("before")
-			query.Add("before", cursor.nextBefore)
-			beforeUrl.RawQuery = query.Encode()
-			pagingUrls.Before = beforeUrl.String()
-		}
-	})()
-
-	(func() {
-		// there are no newer elements within the specified range now.
-		if cursor.Order == DESC {
-			return
-		}
-		if cursor.Order == ASC && !cursor.hasMore {
-			return
-		}
-
-		if cursor.nextAfter != "" {
-			afterUrl := baseUrl
-			query := baseUrl.Query()
+	if cursor.hasMore {
+		baseUrl := *base
+		query := baseUrl.Query()
+		if cursor.baseOrder == ASC {
 			query.Del("after")
 			query.Add("after", cursor.nextAfter)
-			afterUrl.RawQuery = query.Encode()
-			pagingUrls.After = afterUrl.String()
+		} else {
+			query.Del("before")
+			query.Add("before", cursor.nextBefore)
 		}
-	})()
+		baseUrl.RawQuery = query.Encode()
+		pagingUrls.Next = baseUrl.String()
+	}
 
 	return pagingUrls
 }
 
-// Paginate is a scope for the gorm.
+// Paginate returns a cursor that have pagination target columns.
+func (cursor *Cursor) Paginate(columns ...string) *Cursor {
+	cursor.columns = columns
+	return cursor
+}
+
+// Order returns a cursor that have pagination orders.
+// `orders` must be specified in the same order as `Paginate`.
+func (cursor *Cursor) Order(orders ...Order) *Cursor {
+	lowerOrders := make([]Order, len(orders))
+	for i := 0; i < len(orders); i++ {
+		lowerOrders[i] = Order(strings.ToLower(string(orders[i])))
+	}
+	cursor.orders = lowerOrders
+	return cursor
+}
+
+// Scope returns a gorm scope.
 //
 // Example:
 //
-//   db.Scopes(cursor.Paginate("CreatedAt", "ID")).Find(&models)
+//   db.Scopes(cursor.Paginate("CreatedAt", "ID").Order("DESC", "ASC").Scope()).Find(&models)
 //
-func (cursor *Cursor) Paginate(columns ...string) func(db *gorm.DB) *gorm.DB {
+func (cursor *Cursor) Scope() func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		registerCursorCallbacks(db)
-		db = db.InstanceSet("pageboy:columns", columns).
-			InstanceSet("pageboy:cursor", cursor)
 
-		return db.
-			Order(CompositeOrder(cursor.Order, columns...)).
-			Limit(cursor.Limit)
+		cursor.baseOrder = ASC
+		if len(cursor.orders) > 0 {
+			cursor.baseOrder = cursor.orders[0]
+		}
+
+		db = db.InstanceSet("pageboy:cursor", cursor)
+
+		if cursor.Reverse {
+			db = db.Order(CompositeOrder(cursor.columns...)(ReverseOrders(cursor.orders...)...))
+		} else {
+			db = db.Order(CompositeOrder(cursor.columns...)(cursor.orders...))
+		}
+		return db.Limit(cursor.Limit)
 	}
+}
+
+func (cursor *Cursor) comparators(isBefore bool) []Comparator {
+	comparators := make([]Comparator, len(cursor.columns))
+	ordersLength := len(cursor.orders)
+
+	isReverse := func(order Order) bool {
+		if cursor.baseOrder == order {
+			return false
+		}
+		return true
+	}
+
+	for i := 0; i < len(cursor.columns); i++ {
+		order := func() Order {
+			if i < ordersLength {
+				return cursor.orders[i]
+			} else {
+				return cursor.baseOrder
+			}
+		}()
+
+		if isBefore == isReverse(order) {
+			comparators[i] = GreaterThan
+		} else {
+			comparators[i] = LessThan
+		}
+	}
+	return comparators
 }
 
 // FormatCursorString returns a string for Cursor.
@@ -315,25 +344,8 @@ func getCursor(db *gorm.DB) (*Cursor, bool) {
 	return cursor, true
 }
 
-func getColumns(db *gorm.DB) ([]string, bool) {
-	value, ok := db.InstanceGet("pageboy:columns")
-	if !ok {
-		return nil, false
-	}
-	columns, ok := value.([]string)
-	if !ok {
-		return nil, false
-	}
-	return columns, true
-}
-
 func cursorHandleBeforeQuery(db *gorm.DB) {
 	cursor, ok := getCursor(db)
-	if !ok {
-		return
-	}
-
-	columns, ok := getColumns(db)
 	if !ok {
 		return
 	}
@@ -346,14 +358,14 @@ func cursorHandleBeforeQuery(db *gorm.DB) {
 
 	if cursor.Before != "" {
 		segments := ParseCursorString(cursor.Before)
-		args := segments.Interface(ty, columns...)
-		db = db.Scopes(CompositeSortScopeFunc("<", columns...)(args...))
+		args := segments.Interface(ty, cursor.columns...)
+		db = db.Scopes(CompositeSortScopeFunc(cursor.columns...)(cursor.comparators(true)...)(args...))
 	}
 
 	if cursor.After != "" {
 		segments := ParseCursorString(cursor.After)
-		args := segments.Interface(ty, columns...)
-		db = db.Scopes(CompositeSortScopeFunc(">", columns...)(args...))
+		args := segments.Interface(ty, cursor.columns...)
+		db = db.Scopes(CompositeSortScopeFunc(cursor.columns...)(cursor.comparators(false)...)(args...))
 	}
 
 	limit, ok := db.Statement.Clauses[new(clause.Limit).Name()]
@@ -392,10 +404,6 @@ func cursorHandleQuery(db *gorm.DB) {
 	if !ok {
 		return
 	}
-	columns, ok := getColumns(db)
-	if !ok {
-		return
-	}
 
 	cursor.nextBefore = ""
 	cursor.nextAfter = ""
@@ -410,13 +418,12 @@ func cursorHandleQuery(db *gorm.DB) {
 
 	length := results.Len()
 	if length > 0 {
-		switch cursor.Order {
-		case ASC:
-			cursor.nextAfter = getCursorStringFromColumns(results.Index(length-1), columns...)
-			cursor.nextBefore = getCursorStringFromColumns(results.Index(0), columns...)
-		case DESC:
-			cursor.nextAfter = getCursorStringFromColumns(results.Index(0), columns...)
-			cursor.nextBefore = getCursorStringFromColumns(results.Index(length-1), columns...)
+		if cursor.baseOrder == ASC {
+			cursor.nextAfter = getCursorStringFromColumns(results.Index(length-1), cursor.columns...)
+			cursor.nextBefore = getCursorStringFromColumns(results.Index(0), cursor.columns...)
+		} else {
+			cursor.nextAfter = getCursorStringFromColumns(results.Index(0), cursor.columns...)
+			cursor.nextBefore = getCursorStringFromColumns(results.Index(length-1), cursor.columns...)
 		}
 	} else {
 		ty := results.Type().Elem()
@@ -427,13 +434,13 @@ func cursorHandleQuery(db *gorm.DB) {
 		if cursor.After != "" {
 			cursor.nextAfter = cursor.After
 		} else {
-			cursor.nextAfter = getCursorStringFromColumns(reflect.New(ty), columns...)
+			cursor.nextAfter = getCursorStringFromColumns(reflect.New(ty), cursor.columns...)
 		}
 
 		if cursor.Before != "" {
 			cursor.nextBefore = cursor.Before
 		} else {
-			cursor.nextBefore = getCursorStringFromColumns(reflect.New(ty), columns...)
+			cursor.nextBefore = getCursorStringFromColumns(reflect.New(ty), cursor.columns...)
 		}
 	}
 }

@@ -60,20 +60,20 @@ func TestPagerPaginate(t *testing.T) {
 
 	var models []*pagerModel
 	pager := &Pager{Page: 1, PerPage: 2}
-	assertNoError(t, db.Scopes(pager.Paginate()).Order("id ASC").Find(&models).Error)
+	assertNoError(t, db.Scopes(pager.Scope()).Order("id ASC").Find(&models).Error)
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model1.ID)
 	assertEqual(t, models[1].ID, model2.ID)
 	assertEqual(t, *pager.Summary(), PagerSummary{Page: 1, PerPage: 2, TotalCount: 4, TotalPage: 2})
 
 	pager = &Pager{Page: 2, PerPage: 3}
-	assertNoError(t, db.Scopes(pager.Paginate()).Order("id ASC").Find(&models).Error)
+	assertNoError(t, db.Scopes(pager.Scope()).Order("id ASC").Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model4.ID)
 	assertEqual(t, *pager.Summary(), PagerSummary{Page: 2, PerPage: 3, TotalCount: 4, TotalPage: 2})
 
 	pager = &Pager{Page: 3, PerPage: 3}
-	assertNoError(t, db.Scopes(pager.Paginate()).Order("id ASC").Find(&models).Error)
+	assertNoError(t, db.Scopes(pager.Scope()).Order("id ASC").Find(&models).Error)
 	assertEqual(t, len(models), 0)
 	assertEqual(t, *pager.Summary(), PagerSummary{Page: 3, PerPage: 3, TotalCount: 4, TotalPage: 2})
 }
@@ -119,7 +119,7 @@ func TestPagerPaginateWithWhere(t *testing.T) {
 
 	var models []*pagerModel
 	pager := &Pager{Page: 1, PerPage: 2}
-	assertNoError(t, db.Scopes(pager.Paginate()).Where("name = ?", "aaa").Order("id ASC").Find(&models).Error)
+	assertNoError(t, db.Scopes(pager.Scope()).Where("name = ?", "aaa").Order("id ASC").Find(&models).Error)
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model1.ID)
 	assertEqual(t, models[1].ID, model2.ID)
