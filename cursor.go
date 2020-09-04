@@ -64,6 +64,15 @@ func (seg CursorSegment) Int64() int64 {
 	return seg.integer
 }
 
+// Int64Ptr returns converted to pointer of integer.
+func (seg CursorSegment) Int64Ptr() *int64 {
+	if seg.isNil {
+		return nil
+	}
+	i := seg.integer
+	return &i
+}
+
 // Time returns converted to time.
 func (seg CursorSegment) Time() *time.Time {
 	if seg.isNil {
@@ -84,6 +93,10 @@ func (seg CursorSegment) Interface(ty reflect.Type, column string) interface{} {
 	if field.Type == reflect.TypeOf(time.Time{}) ||
 		field.Type == reflect.TypeOf(new(time.Time)) {
 		return seg.Time()
+	}
+
+	if field.Type.Kind() == reflect.Ptr {
+		return seg.Int64Ptr()
 	}
 	return seg.Int64()
 }

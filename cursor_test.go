@@ -11,8 +11,9 @@ import (
 
 type cursorModel struct {
 	gorm.Model
-	Name string
-	Time *time.Time
+	SubID *uint
+	Name  string
+	Time  *time.Time
 }
 
 func (cursor *Cursor) buildURL(base url.URL) *url.URL {
@@ -88,6 +89,7 @@ func TestParseCursorString(t *testing.T) {
 	assertEqual(t, len(ga), 2)
 	assertEqual(t, ga[0].Time().UnixNano(), ti.UnixNano())
 	assertEqual(t, ga[1].Int64(), int64(20))
+	assertEqual(t, *ga[1].Int64Ptr(), int64(20))
 
 	ti, err = time.Parse(format, "2020-04-01T02:03:04")
 	assertNoError(t, err)
@@ -95,6 +97,7 @@ func TestParseCursorString(t *testing.T) {
 	ga = ParseCursorString("1585706584")
 	assertEqual(t, len(ga), 1)
 	assertEqual(t, ga[0].Int64(), int64(1585706584))
+	assertEqual(t, *ga[0].Int64Ptr(), int64(1585706584))
 
 	ga = ParseCursorString("1585706584_20")
 	assertEqual(t, len(ga), 2)
@@ -104,6 +107,8 @@ func TestParseCursorString(t *testing.T) {
 	ga = ParseCursorString("_1")
 	assertEqual(t, len(ga), 2)
 	assertEqual(t, ga[0].Time(), (*time.Time)(nil))
+	assertEqual(t, ga[0].Int64(), int64(0))
+	assertEqual(t, ga[0].Int64Ptr(), (*int64)(nil))
 	assertEqual(t, ga[1].Int64(), int64(1))
 
 	ga = ParseCursorString("_1__2")
@@ -776,6 +781,156 @@ func TestCursorPaginateWithNullableTimeASC(t *testing.T) {
 	assertEqual(t, models[0].ID, model4.ID)
 	assertEqual(t, cursor.GetNextBefore(), FormatCursorString(models[0].Time, models[0].ID))
 	assertEqual(t, cursor.GetNextAfter(), FormatCursorString(models[0].Time, models[0].ID))
+}
+
+func TestCursorPaginateWithNullableDescAsc(t *testing.T) {
+	db := openDB()
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
+
+	baseUrl, err := url.Parse("https://example.com/users?a=1")
+	assertNoError(t, err)
+
+	create := func(subid uint) *cursorModel {
+		var s *uint
+		if subid != 0 {
+			s = &subid
+		}
+		model := &cursorModel{
+			SubID: s,
+		}
+		assertNoError(t, db.Create(model).Error)
+		return model
+	}
+
+	model1 := create(3)
+	model2 := create(0)
+	model3 := create(2)
+	model4 := create(0)
+	model5 := create(0)
+
+	var models []*cursorModel
+	cursor := &Cursor{
+		Limit: 1,
+	}
+	url := cursor.buildURL(*baseUrl)
+	assertNoError(t, db.Scopes(cursor.Paginate("SubID", "ID").Order("DESC", "ASC").Scope()).Find(&models).Error)
+	assertEqual(t, len(models), 1)
+	assertEqual(t, models[0].ID, model1.ID)
+	assertEqual(t, cursor.GetNextAfter(), FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
+		Next: "https://example.com/users?a=1" +
+			"&before=" + FormatCursorString(models[0].SubID, models[0].ID) +
+			"&limit=1",
+	})
+
+	cursor = &Cursor{
+		Before: cursor.GetNextBefore(),
+		Limit:  2,
+	}
+	url = cursor.buildURL(*baseUrl)
+	assertNoError(t, db.Scopes(cursor.Paginate("SubID", "ID").Order("DESC", "ASC").Scope()).Find(&models).Error)
+	assertEqual(t, len(models), 2)
+	assertEqual(t, models[0].ID, model3.ID)
+	assertEqual(t, models[1].ID, model2.ID)
+	assertEqual(t, cursor.GetNextAfter(), FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), FormatCursorString(models[1].SubID, models[1].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
+		Next: "https://example.com/users?a=1" +
+			"&before=" + FormatCursorString(models[1].SubID, models[1].ID) +
+			"&limit=2",
+	})
+
+	cursor = &Cursor{
+		Before: cursor.GetNextBefore(),
+		Limit:  2,
+	}
+	url = cursor.buildURL(*baseUrl)
+	assertNoError(t, db.Scopes(cursor.Paginate("SubID", "ID").Order("DESC", "ASC").Scope()).Find(&models).Error)
+	assertEqual(t, len(models), 2)
+	assertEqual(t, models[0].ID, model4.ID)
+	assertEqual(t, models[1].ID, model5.ID)
+	assertEqual(t, cursor.GetNextAfter(), FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), FormatCursorString(models[1].SubID, models[1].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
+		Next: "",
+	})
+}
+
+func TestCursorPaginateWithNullableAscDesc(t *testing.T) {
+	db := openDB().Debug()
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
+
+	baseUrl, err := url.Parse("https://example.com/users?a=1")
+	assertNoError(t, err)
+
+	create := func(subid uint) *cursorModel {
+		var s *uint
+		if subid != 0 {
+			s = &subid
+		}
+		model := &cursorModel{
+			SubID: s,
+		}
+		assertNoError(t, db.Create(model).Error)
+		return model
+	}
+
+	model1 := create(3)
+	model2 := create(0)
+	model3 := create(2)
+	model4 := create(0)
+	model5 := create(0)
+
+	var models []*cursorModel
+	cursor := &Cursor{
+		Limit: 1,
+	}
+	url := cursor.buildURL(*baseUrl)
+	assertNoError(t, db.Scopes(cursor.Paginate("SubID", "ID").Order("ASC", "DESC").Scope()).Find(&models).Error)
+	assertEqual(t, len(models), 1)
+	assertEqual(t, models[0].ID, model5.ID)
+	assertEqual(t, cursor.GetNextBefore(), FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
+		Next: "https://example.com/users?a=1" +
+			"&after=" + FormatCursorString(models[0].SubID, models[0].ID) +
+			"&limit=1",
+	})
+
+	cursor = &Cursor{
+		After: cursor.GetNextAfter(),
+		Limit: 2,
+	}
+	url = cursor.buildURL(*baseUrl)
+	assertNoError(t, db.Scopes(cursor.Paginate("SubID", "ID").Order("ASC", "DESC").Scope()).Find(&models).Error)
+	assertEqual(t, len(models), 2)
+	assertEqual(t, models[0].ID, model4.ID)
+	assertEqual(t, models[1].ID, model2.ID)
+	assertEqual(t, cursor.GetNextBefore(), FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), FormatCursorString(models[1].SubID, models[1].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
+		Next: "https://example.com/users?a=1" +
+			"&after=" + FormatCursorString(models[1].SubID, models[1].ID) +
+			"&limit=2",
+	})
+
+	cursor = &Cursor{
+		After: cursor.GetNextAfter(),
+		Limit: 2,
+	}
+	url = cursor.buildURL(*baseUrl)
+	assertNoError(t, db.Scopes(cursor.Paginate("SubID", "ID").Order("ASC", "DESC").Scope()).Find(&models).Error)
+	assertEqual(t, len(models), 2)
+	assertEqual(t, models[0].ID, model3.ID)
+	assertEqual(t, models[1].ID, model1.ID)
+	assertEqual(t, cursor.GetNextBefore(), FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), FormatCursorString(models[1].SubID, models[1].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
+		Next: "",
+	})
 }
 
 func TestCursorPaginateReverse(t *testing.T) {

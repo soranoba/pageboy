@@ -104,6 +104,7 @@ func CompositeSortScopeFunc(columns ...string) func(comparators ...Comparator) f
 						}
 					case GreaterThan:
 						if isNil {
+							eqQuery += fmt.Sprintf("%s IS NOT NULL OR ", column)
 							continue Loop
 						} else {
 							query := fmt.Sprintf("(%s%s %s ?)", eqQuery, column, comparators[i])
