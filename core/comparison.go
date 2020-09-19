@@ -20,10 +20,10 @@ const (
 
 // MakeComparisonScopeBuildFunc returns a GORM scope builder.
 // This scope add a where clauses filtered by comparisons ranges.
-func MakeComparisonScopeBuildFunc(columns ...string) func(comparisions ...Comparison) func(values ...interface{}) func(*gorm.DB) *gorm.DB {
-	return func(comparisions ...Comparison) func(values ...interface{}) func(*gorm.DB) *gorm.DB {
-		if len(columns) != len(comparisions) {
-			panic("columns and comparisions must have the same length")
+func MakeComparisonScopeBuildFunc(columns ...string) func(comparisons ...Comparison) func(values ...interface{}) func(*gorm.DB) *gorm.DB {
+	return func(comparisons ...Comparison) func(values ...interface{}) func(*gorm.DB) *gorm.DB {
+		if len(columns) != len(comparisons) {
+			panic("columns and comparisons must have the same length")
 		}
 
 		return func(values ...interface{}) func(*gorm.DB) *gorm.DB {
@@ -40,12 +40,12 @@ func MakeComparisonScopeBuildFunc(columns ...string) func(comparisions ...Compar
 					return len(values)
 				})()
 
-				comparisions = comparisions[0:length]
-				for i := len(comparisions); i < length; i++ {
+				comparisons = comparisons[0:length]
+				for i := len(comparisons); i < length; i++ {
 					if i == 0 {
-						comparisions = append(comparisions, GreaterThan)
+						comparisons = append(comparisons, GreaterThan)
 					} else {
-						comparisions = append(comparisions, comparisions[i-1])
+						comparisons = append(comparisons, comparisons[i-1])
 					}
 				}
 
@@ -56,13 +56,13 @@ func MakeComparisonScopeBuildFunc(columns ...string) func(comparisions ...Compar
 					val := reflect.ValueOf(values[i])
 					isNil := val.Kind() == reflect.Ptr && val.IsNil()
 
-					switch comparisions[i] {
+					switch comparisons[i] {
 					case LessThan:
 						if isNil {
 							eqQuery += fmt.Sprintf("`%s` IS NULL AND ", column)
 							continue Loop
 						} else {
-							query := fmt.Sprintf("(%s(`%s` IS NULL OR `%s` %s ?))", eqQuery, column, column, comparisions[i])
+							query := fmt.Sprintf("(%s(`%s` IS NULL OR `%s` %s ?))", eqQuery, column, column, comparisons[i])
 							queries = append(queries, query)
 						}
 					case GreaterThan:
@@ -70,7 +70,7 @@ func MakeComparisonScopeBuildFunc(columns ...string) func(comparisions ...Compar
 							eqQuery += fmt.Sprintf("`%s` IS NOT NULL OR ", column)
 							continue Loop
 						} else {
-							query := fmt.Sprintf("(%s`%s` %s ?)", eqQuery, column, comparisions[i])
+							query := fmt.Sprintf("(%s`%s` %s ?)", eqQuery, column, comparisons[i])
 							queries = append(queries, query)
 						}
 					default:
