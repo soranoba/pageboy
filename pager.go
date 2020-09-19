@@ -1,7 +1,6 @@
 package pageboy
 
 import (
-	"errors"
 	"math"
 
 	"gorm.io/gorm"
@@ -45,10 +44,10 @@ func (pager *Pager) Summary() *PagerSummary {
 // If you execute Paginate with an invalid values, it panic may occur.
 func (pager *Pager) Validate() error {
 	if pager.PerPage == 0 {
-		return errors.New("PerPage parameter must be greater than 0")
+		return &ValidationError{Field: "PerPage", Message: "must be greater than 0"}
 	}
 	if pager.Page == 0 {
-		return errors.New("Page parameter must be greater than 0")
+		return &ValidationError{Field: "Page", Message: "must be greater than 0"}
 	}
 	return nil
 }

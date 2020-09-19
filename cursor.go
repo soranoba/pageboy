@@ -1,7 +1,6 @@
 package pageboy
 
 import (
-	"errors"
 	"net/url"
 	"reflect"
 	"strings"
@@ -48,13 +47,13 @@ func NewCursor() *Cursor {
 // If you execute Paginate with an invalid value, it panic may occur.
 func (cursor *Cursor) Validate() error {
 	if cursor.Before != "" && !cursor.Before.Validate() {
-		return errors.New("The before parameter is invalid")
+		return &ValidationError{Field: "Before", Message: "is invalid"}
 	}
 	if cursor.After != "" && !cursor.After.Validate() {
-		return errors.New("The after parameter is invalid")
+		return &ValidationError{Field: "After", Message: "is invalid"}
 	}
 	if cursor.Limit < 1 {
-		return errors.New("The limit parameter is invalid")
+		return &ValidationError{Field: "Limit", Message: "is invalid"}
 	}
 	return nil
 }
