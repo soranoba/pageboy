@@ -7,9 +7,9 @@ import (
 	"gorm.io/gorm"
 )
 
-// Pager can to get a specific range of records from DB.
+// Pager is a builder that build a GORM scope that specifies a range of records.
 type Pager struct {
-	Page    int `json:"page" query:"page"`
+	Page    int `json:"page"     query:"page"`
 	PerPage int `json:"per_page" query:"per_page"`
 
 	totalCount int64
@@ -17,13 +17,13 @@ type Pager struct {
 
 // PagerSummary is summary of the query.
 type PagerSummary struct {
-	Page       int   `json:"page" query:"page"`
-	PerPage    int   `json:"per_page" query:"per_page"`
+	Page       int   `json:"page"        query:"page"`
+	PerPage    int   `json:"per_page"    query:"per_page"`
 	TotalCount int64 `json:"total_count" query:"total_count"`
-	TotalPage  int   `json:"total_page" query:"total_page"`
+	TotalPage  int   `json:"total_page"  query:"total_page"`
 }
 
-// NewPager returns a default pager.
+// NewPager returns a default Pager.
 func NewPager() *Pager {
 	return &Pager{
 		Page:    1,
@@ -31,7 +31,7 @@ func NewPager() *Pager {
 	}
 }
 
-// Summary returns summary of pager.
+// Summary returns a PagerSummary.
 func (pager *Pager) Summary() *PagerSummary {
 	return &PagerSummary{
 		Page:       pager.Page,
@@ -41,8 +41,8 @@ func (pager *Pager) Summary() *PagerSummary {
 	}
 }
 
-// Validate returns true when the Pager is valid. Otherwise, it returns false.
-// If you execute Paginate with an invalid value, panic may occur.
+// Validate returns true when the values of Pager is valid. Otherwise, it returns false.
+// If you execute Paginate with an invalid values, it panic may occur.
 func (pager *Pager) Validate() error {
 	if pager.PerPage == 0 {
 		return errors.New("PerPage parameter must be greater than 0")
@@ -53,12 +53,7 @@ func (pager *Pager) Validate() error {
 	return nil
 }
 
-// Scope returns a scope for the gorm.
-//
-// Example:
-//
-//   db.Scopes(pager.Scope()).Order("id ASC").Find(&models)
-//
+// Scope returns a GORM scope.
 func (pager *Pager) Scope() func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		registerPagerCallbacks(db)

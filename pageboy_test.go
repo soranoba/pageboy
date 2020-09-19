@@ -10,20 +10,6 @@ import (
 	"gorm.io/gorm"
 )
 
-func TestCompositeOrder(t *testing.T) {
-	assertEqual(t, CompositeOrder("ID", "CreatedAt")("ASC", "ASC"), "id ASC, created_at ASC")
-	assertEqual(t, CompositeOrder("ID", "CreatedAt")("DESC", "DESC"), "id DESC, created_at DESC")
-	assertEqual(t, CompositeOrder("ID", "CreatedAt")("ASC", "DESC"), "id ASC, created_at DESC")
-}
-
-func TestToSnake(t *testing.T) {
-	assertEqual(t, toSnake("CreatedAt"), "created_at")
-	assertEqual(t, toSnake("ID"), "id")
-	assertEqual(t, toSnake("TestID"), "test_id")
-	assertEqual(t, toSnake("ImageURL"), "image_url")
-	assertEqual(t, toSnake("AbCdEf"), "ab_cd_ef")
-}
-
 func openDB() *gorm.DB {
 	db, err := gorm.Open(
 		mysql.Open(
