@@ -1,4 +1,4 @@
-package utils
+package core
 
 func toSnake(str string) string {
 	runes := []rune(str)

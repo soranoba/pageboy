@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/soranoba/pageboy/utils"
+	pbc "github.com/soranoba/pageboy/core"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -13,19 +13,19 @@ import (
 // Cursor is a builder that build a GORM scope that specifies a range from the cursor position of records.
 // You can read it from query or json.
 type Cursor struct {
-	Before  utils.CursorString `json:"before"  query:"before"`
-	After   utils.CursorString `json:"after"   query:"after"`
-	Limit   int                `json:"limit"   query:"limit"`
-	Reverse bool               `json:"reverse" query:"reverse"`
+	Before  pbc.CursorString `json:"before"  query:"before"`
+	After   pbc.CursorString `json:"after"   query:"after"`
+	Limit   int              `json:"limit"   query:"limit"`
+	Reverse bool             `json:"reverse" query:"reverse"`
 
 	// See: cursor.Order
-	orders []utils.Order
+	orders []pbc.Order
 	// See: cursor.Paginate
 	columns []string
 
-	nextBefore utils.CursorString
-	nextAfter  utils.CursorString
-	baseOrder  utils.Order
+	nextBefore pbc.CursorString
+	nextAfter  pbc.CursorString
+	baseOrder  pbc.Order
 	limit      int
 	hasMore    bool
 }
@@ -59,12 +59,12 @@ func (cursor *Cursor) Validate() error {
 }
 
 // GetNextAfter returns a value of query to access if it exists some records after the current position.
-func (cursor *Cursor) GetNextAfter() utils.CursorString {
+func (cursor *Cursor) GetNextAfter() pbc.CursorString {
 	return cursor.nextAfter
 }
 
 // GetNextBefore returns a value of query to access if it exists some records before the current position.
-func (cursor *Cursor) GetNextBefore() utils.CursorString {
+func (cursor *Cursor) GetNextBefore() pbc.CursorString {
 	return cursor.nextBefore
 }
 
@@ -81,7 +81,7 @@ func (cursor *Cursor) BuildNextPagingUrls(base *url.URL) *CursorPagingUrls {
 	if cursor.hasMore {
 		baseURL := *base
 		query := baseURL.Query()
-		if (cursor.baseOrder == utils.ASC) != cursor.Reverse {
+		if (cursor.baseOrder == pbc.ASC) != cursor.Reverse {
 			query.Del("after")
 			query.Add("after", string(cursor.nextAfter))
 		} else {
@@ -103,10 +103,10 @@ func (cursor *Cursor) Paginate(columns ...string) *Cursor {
 
 // Order set the pagination orders, and returns self.
 // The orders must be same order as columns that set to arguments of Paginate.
-func (cursor *Cursor) Order(orders ...utils.Order) *Cursor {
-	lowerOrders := make([]utils.Order, len(orders))
+func (cursor *Cursor) Order(orders ...pbc.Order) *Cursor {
+	lowerOrders := make([]pbc.Order, len(orders))
 	for i := 0; i < len(orders); i++ {
-		lowerOrders[i] = utils.Order(strings.ToLower(string(orders[i])))
+		lowerOrders[i] = pbc.Order(strings.ToLower(string(orders[i])))
 	}
 	cursor.orders = lowerOrders
 	return cursor
@@ -117,7 +117,7 @@ func (cursor *Cursor) Scope() func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		registerCursorCallbacks(db)
 
-		cursor.baseOrder = utils.ASC
+		cursor.baseOrder = pbc.ASC
 		if len(cursor.orders) > 0 {
 			cursor.baseOrder = cursor.orders[0]
 		}
@@ -125,19 +125,19 @@ func (cursor *Cursor) Scope() func(db *gorm.DB) *gorm.DB {
 		db = db.InstanceSet("pageboy:cursor", cursor)
 
 		if cursor.Reverse {
-			db = db.Order(utils.OrderClauseBuilder(cursor.columns...)(utils.ReverseOrders(cursor.orders)...))
+			db = db.Order(pbc.OrderClauseBuilder(cursor.columns...)(pbc.ReverseOrders(cursor.orders)...))
 		} else {
-			db = db.Order(utils.OrderClauseBuilder(cursor.columns...)(cursor.orders...))
+			db = db.Order(pbc.OrderClauseBuilder(cursor.columns...)(cursor.orders...))
 		}
 		return db.Limit(cursor.Limit)
 	}
 }
 
-func (cursor *Cursor) comparisons(isBefore bool) []utils.Comparison {
-	comparisons := make([]utils.Comparison, len(cursor.columns))
+func (cursor *Cursor) comparisons(isBefore bool) []pbc.Comparison {
+	comparisons := make([]pbc.Comparison, len(cursor.columns))
 	ordersLength := len(cursor.orders)
 
-	isReverse := func(order utils.Order) bool {
+	isReverse := func(order pbc.Order) bool {
 		if cursor.baseOrder == order {
 			return false
 		}
@@ -145,7 +145,7 @@ func (cursor *Cursor) comparisons(isBefore bool) []utils.Comparison {
 	}
 
 	for i := 0; i < len(cursor.columns); i++ {
-		order := func() utils.Order {
+		order := func() pbc.Order {
 			if i < ordersLength {
 				return cursor.orders[i]
 			}
@@ -153,9 +153,9 @@ func (cursor *Cursor) comparisons(isBefore bool) []utils.Comparison {
 		}()
 
 		if isBefore == isReverse(order) {
-			comparisons[i] = utils.GreaterThan
+			comparisons[i] = pbc.GreaterThan
 		} else {
-			comparisons[i] = utils.LessThan
+			comparisons[i] = pbc.LessThan
 		}
 	}
 	return comparisons
@@ -186,15 +186,15 @@ func cursorHandleBeforeQuery(db *gorm.DB) {
 	}
 
 	if cursor.Before != "" {
-		segments := utils.NewCursorSegments(cursor.Before)
+		segments := pbc.NewCursorSegments(cursor.Before)
 		args := segments.Interface(ty, cursor.columns...)
-		db = db.Scopes(utils.MakeComparisonScopeBuildFunc(cursor.columns...)(cursor.comparisons(true)...)(args...))
+		db = db.Scopes(pbc.MakeComparisonScopeBuildFunc(cursor.columns...)(cursor.comparisons(true)...)(args...))
 	}
 
 	if cursor.After != "" {
-		segments := utils.NewCursorSegments(cursor.After)
+		segments := pbc.NewCursorSegments(cursor.After)
 		args := segments.Interface(ty, cursor.columns...)
-		db = db.Scopes(utils.MakeComparisonScopeBuildFunc(cursor.columns...)(cursor.comparisons(false)...)(args...))
+		db = db.Scopes(pbc.MakeComparisonScopeBuildFunc(cursor.columns...)(cursor.comparisons(false)...)(args...))
 	}
 
 	limit, ok := db.Statement.Clauses[new(clause.Limit).Name()]
@@ -247,7 +247,7 @@ func cursorHandleQuery(db *gorm.DB) {
 
 	length := results.Len()
 	if length > 0 {
-		if (cursor.baseOrder == utils.ASC) != cursor.Reverse {
+		if (cursor.baseOrder == pbc.ASC) != cursor.Reverse {
 			cursor.nextAfter = getCursorStringFromColumns(results.Index(length-1), cursor.columns...)
 			cursor.nextBefore = getCursorStringFromColumns(results.Index(0), cursor.columns...)
 		} else {
@@ -274,7 +274,7 @@ func cursorHandleQuery(db *gorm.DB) {
 	}
 }
 
-func getCursorStringFromColumns(value reflect.Value, columns ...string) utils.CursorString {
+func getCursorStringFromColumns(value reflect.Value, columns ...string) pbc.CursorString {
 	value = reflect.Indirect(value)
 	if !(value.Kind() == reflect.Struct) {
 		panic("Find result is not a struct or an array of struct.")
@@ -293,7 +293,7 @@ func getCursorStringFromColumns(value reflect.Value, columns ...string) utils.Cu
 		}
 	}
 
-	return utils.FormatCursorString(args...)
+	return pbc.FormatCursorString(args...)
 }
 
 func registerCursorCallbacks(db *gorm.DB) {

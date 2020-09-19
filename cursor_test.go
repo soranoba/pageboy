@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/soranoba/pageboy/utils"
+	pbc "github.com/soranoba/pageboy/core"
 	"gorm.io/gorm"
 )
 
@@ -106,11 +106,11 @@ func TestCursorPaginateDESC(t *testing.T) {
 	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID").Order("DESC", "DESC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model4.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: string("https://example.com/users?a=1" +
-			"&before=" + utils.FormatCursorString(&models[0].CreatedAt, models[0].ID) +
+			"&before=" + pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID) +
 			"&limit=1"),
 	})
 
@@ -123,11 +123,11 @@ func TestCursorPaginateDESC(t *testing.T) {
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model3.ID)
 	assertEqual(t, models[1].ID, model2.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[1].CreatedAt, models[1].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[1].CreatedAt, models[1].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "https://example.com/users?a=1" +
-			"&before=" + string(utils.FormatCursorString(&models[1].CreatedAt, models[1].ID)) +
+			"&before=" + string(pbc.FormatCursorString(&models[1].CreatedAt, models[1].ID)) +
 			"&limit=2",
 	})
 
@@ -139,8 +139,8 @@ func TestCursorPaginateDESC(t *testing.T) {
 	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID").Order("DESC", "DESC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model1.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "",
 	})
@@ -179,11 +179,11 @@ func TestCursorPaginateASC(t *testing.T) {
 	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID").Order("ASC", "ASC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model1.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "https://example.com/users?a=1" +
-			"&after=" + string(utils.FormatCursorString(&models[0].CreatedAt, models[0].ID)) +
+			"&after=" + string(pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID)) +
 			"&limit=1",
 	})
 
@@ -196,11 +196,11 @@ func TestCursorPaginateASC(t *testing.T) {
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model2.ID)
 	assertEqual(t, models[1].ID, model3.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[1].CreatedAt, models[1].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[1].CreatedAt, models[1].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "https://example.com/users?a=1" +
-			"&after=" + string(utils.FormatCursorString(&models[1].CreatedAt, models[1].ID)) +
+			"&after=" + string(pbc.FormatCursorString(&models[1].CreatedAt, models[1].ID)) +
 			"&limit=2",
 	})
 
@@ -212,8 +212,8 @@ func TestCursorPaginateASC(t *testing.T) {
 	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID").Order("ASC", "ASC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model4.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "",
 	})
@@ -247,7 +247,7 @@ func TestCursorPaginateWithBeforeDESC(t *testing.T) {
 
 	var models []*cursorModel
 	cursor := &Cursor{
-		Before: utils.FormatCursorString(&model4.CreatedAt, model4.ID),
+		Before: pbc.FormatCursorString(&model4.CreatedAt, model4.ID),
 		Limit:  2,
 	}
 	url := cursor.buildURL(*baseURL)
@@ -255,11 +255,11 @@ func TestCursorPaginateWithBeforeDESC(t *testing.T) {
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model3.ID)
 	assertEqual(t, models[1].ID, model2.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[1].CreatedAt, models[1].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[1].CreatedAt, models[1].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "https://example.com/users?a=1" +
-			"&before=" + string(utils.FormatCursorString(&models[1].CreatedAt, models[1].ID)) +
+			"&before=" + string(pbc.FormatCursorString(&models[1].CreatedAt, models[1].ID)) +
 			"&limit=2",
 	})
 
@@ -271,8 +271,8 @@ func TestCursorPaginateWithBeforeDESC(t *testing.T) {
 	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID").Order("DESC", "DESC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model1.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "",
 	})
@@ -306,7 +306,7 @@ func TestCursorPaginateWithBeforeASC(t *testing.T) {
 
 	var models []*cursorModel
 	cursor := &Cursor{
-		Before: utils.FormatCursorString(&model4.CreatedAt, model4.ID),
+		Before: pbc.FormatCursorString(&model4.CreatedAt, model4.ID),
 		Limit:  2,
 	}
 	url := cursor.buildURL(*baseURL)
@@ -314,11 +314,11 @@ func TestCursorPaginateWithBeforeASC(t *testing.T) {
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model1.ID)
 	assertEqual(t, models[1].ID, model2.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[1].CreatedAt, models[1].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[1].CreatedAt, models[1].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "https://example.com/users?a=1" +
-			"&after=" + string(utils.FormatCursorString(&models[1].CreatedAt, models[1].ID)) +
+			"&after=" + string(pbc.FormatCursorString(&models[1].CreatedAt, models[1].ID)) +
 			"&before=" + string(cursor.Before) +
 			"&limit=2",
 	})
@@ -332,8 +332,8 @@ func TestCursorPaginateWithBeforeASC(t *testing.T) {
 	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID").Order("ASC", "ASC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model3.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "",
 	})
@@ -367,7 +367,7 @@ func TestCursorPaginateWithAfterDESC(t *testing.T) {
 
 	var models []*cursorModel
 	cursor := &Cursor{
-		After: utils.FormatCursorString(&model1.CreatedAt, model1.ID),
+		After: pbc.FormatCursorString(&model1.CreatedAt, model1.ID),
 		Limit: 2,
 	}
 	url := cursor.buildURL(*baseURL)
@@ -375,12 +375,12 @@ func TestCursorPaginateWithAfterDESC(t *testing.T) {
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model4.ID)
 	assertEqual(t, models[1].ID, model3.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[1].CreatedAt, models[1].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[1].CreatedAt, models[1].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "https://example.com/users?a=1" +
 			"&after=" + string(cursor.After) +
-			"&before=" + string(utils.FormatCursorString(&models[1].CreatedAt, models[1].ID)) +
+			"&before=" + string(pbc.FormatCursorString(&models[1].CreatedAt, models[1].ID)) +
 			"&limit=2",
 	})
 
@@ -393,8 +393,8 @@ func TestCursorPaginateWithAfterDESC(t *testing.T) {
 	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID").Order("DESC", "DESC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model2.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "",
 	})
@@ -428,7 +428,7 @@ func TestCursorPaginateWithAfterASC(t *testing.T) {
 
 	var models []*cursorModel
 	cursor := &Cursor{
-		After: utils.FormatCursorString(&model1.CreatedAt, model1.ID),
+		After: pbc.FormatCursorString(&model1.CreatedAt, model1.ID),
 		Limit: 2,
 	}
 	url := cursor.buildURL(*baseURL)
@@ -436,11 +436,11 @@ func TestCursorPaginateWithAfterASC(t *testing.T) {
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model2.ID)
 	assertEqual(t, models[1].ID, model3.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[1].CreatedAt, models[1].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[1].CreatedAt, models[1].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "https://example.com/users?a=1" +
-			"&after=" + string(utils.FormatCursorString(&models[1].CreatedAt, models[1].ID)) +
+			"&after=" + string(pbc.FormatCursorString(&models[1].CreatedAt, models[1].ID)) +
 			"&limit=2",
 	})
 
@@ -452,8 +452,8 @@ func TestCursorPaginateWithAfterASC(t *testing.T) {
 	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID").Order("ASC", "ASC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model4.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "",
 	})
@@ -488,8 +488,8 @@ func TestCursorPaginateWithAfterAndBeforeDESC(t *testing.T) {
 
 	var models []*cursorModel
 	cursor := &Cursor{
-		Before: utils.FormatCursorString(&model5.CreatedAt, model5.ID),
-		After:  utils.FormatCursorString(&model1.CreatedAt, model1.ID),
+		Before: pbc.FormatCursorString(&model5.CreatedAt, model5.ID),
+		After:  pbc.FormatCursorString(&model1.CreatedAt, model1.ID),
 		Limit:  2,
 	}
 	url := cursor.buildURL(*baseURL)
@@ -497,12 +497,12 @@ func TestCursorPaginateWithAfterAndBeforeDESC(t *testing.T) {
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model4.ID)
 	assertEqual(t, models[1].ID, model3.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[1].CreatedAt, models[1].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[1].CreatedAt, models[1].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "https://example.com/users?a=1" +
 			"&after=" + string(cursor.After) +
-			"&before=" + string(utils.FormatCursorString(&models[1].CreatedAt, models[1].ID)) +
+			"&before=" + string(pbc.FormatCursorString(&models[1].CreatedAt, models[1].ID)) +
 			"&limit=2",
 	})
 
@@ -515,8 +515,8 @@ func TestCursorPaginateWithAfterAndBeforeDESC(t *testing.T) {
 	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID").Order("DESC", "DESC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model2.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "",
 	})
@@ -551,8 +551,8 @@ func TestCursorPaginateWithAfterAndBeforeASC(t *testing.T) {
 
 	var models []*cursorModel
 	cursor := &Cursor{
-		Before: utils.FormatCursorString(&model5.CreatedAt, model5.ID),
-		After:  utils.FormatCursorString(&model1.CreatedAt, model1.ID),
+		Before: pbc.FormatCursorString(&model5.CreatedAt, model5.ID),
+		After:  pbc.FormatCursorString(&model1.CreatedAt, model1.ID),
 		Limit:  2,
 	}
 	url := cursor.buildURL(*baseURL)
@@ -560,11 +560,11 @@ func TestCursorPaginateWithAfterAndBeforeASC(t *testing.T) {
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model2.ID)
 	assertEqual(t, models[1].ID, model3.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[1].CreatedAt, models[1].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[1].CreatedAt, models[1].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "https://example.com/users?a=1" +
-			"&after=" + string(utils.FormatCursorString(&models[1].CreatedAt, models[1].ID)) +
+			"&after=" + string(pbc.FormatCursorString(&models[1].CreatedAt, models[1].ID)) +
 			"&before=" + string(cursor.Before) +
 			"&limit=2",
 	})
@@ -578,8 +578,8 @@ func TestCursorPaginateWithAfterAndBeforeASC(t *testing.T) {
 	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID").Order("ASC", "ASC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model4.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "",
 	})
@@ -596,8 +596,8 @@ func TestCursorPaginateWithEmpty(t *testing.T) {
 	}
 	assertNoError(t, db.Scopes(cursor.Paginate("Time", "ID").Order("DESC", "DESC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 0)
-	assertEqual(t, cursor.GetNextAfter(), utils.CursorString("_0"))
-	assertEqual(t, cursor.GetNextBefore(), utils.CursorString("_0"))
+	assertEqual(t, cursor.GetNextAfter(), pbc.CursorString("_0"))
+	assertEqual(t, cursor.GetNextBefore(), pbc.CursorString("_0"))
 }
 
 func TestCursorPaginateWithNullableTimeDESC(t *testing.T) {
@@ -628,8 +628,8 @@ func TestCursorPaginateWithNullableTimeDESC(t *testing.T) {
 	assertNoError(t, db.Scopes(cursor.Paginate("Time", "ID").Order("DESC", "DESC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model4.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(models[0].Time, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(models[0].Time, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[0].Time, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[0].Time, models[0].ID))
 
 	cursor = &Cursor{
 		Before: cursor.GetNextBefore(),
@@ -639,8 +639,8 @@ func TestCursorPaginateWithNullableTimeDESC(t *testing.T) {
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model3.ID)
 	assertEqual(t, models[1].ID, model2.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(models[0].Time, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(models[1].Time, models[1].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[0].Time, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[1].Time, models[1].ID))
 
 	cursor = &Cursor{
 		Before: cursor.GetNextBefore(),
@@ -649,8 +649,8 @@ func TestCursorPaginateWithNullableTimeDESC(t *testing.T) {
 	assertNoError(t, db.Scopes(cursor.Paginate("Time", "ID").Order("DESC", "DESC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model1.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(models[0].Time, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(models[0].Time, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[0].Time, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[0].Time, models[0].ID))
 }
 
 func TestCursorPaginateWithNullableTimeASC(t *testing.T) {
@@ -681,8 +681,8 @@ func TestCursorPaginateWithNullableTimeASC(t *testing.T) {
 	assertNoError(t, db.Scopes(cursor.Paginate("Time", "ID").Order("ASC", "ASC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model1.ID)
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(models[0].Time, models[0].ID))
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(models[0].Time, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[0].Time, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[0].Time, models[0].ID))
 
 	cursor = &Cursor{
 		After: cursor.GetNextAfter(),
@@ -692,8 +692,8 @@ func TestCursorPaginateWithNullableTimeASC(t *testing.T) {
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model2.ID)
 	assertEqual(t, models[1].ID, model3.ID)
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(models[0].Time, models[0].ID))
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(models[1].Time, models[1].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[0].Time, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[1].Time, models[1].ID))
 
 	cursor = &Cursor{
 		After: cursor.GetNextAfter(),
@@ -702,8 +702,8 @@ func TestCursorPaginateWithNullableTimeASC(t *testing.T) {
 	assertNoError(t, db.Scopes(cursor.Paginate("Time", "ID").Order("ASC", "ASC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model4.ID)
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(models[0].Time, models[0].ID))
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(models[0].Time, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[0].Time, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[0].Time, models[0].ID))
 }
 
 func TestCursorPaginateWithNullableDescAsc(t *testing.T) {
@@ -740,11 +740,11 @@ func TestCursorPaginateWithNullableDescAsc(t *testing.T) {
 	assertNoError(t, db.Scopes(cursor.Paginate("SubID", "ID").Order("DESC", "ASC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model1.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(models[0].SubID, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "https://example.com/users?a=1" +
-			"&before=" + string(utils.FormatCursorString(models[0].SubID, models[0].ID)) +
+			"&before=" + string(pbc.FormatCursorString(models[0].SubID, models[0].ID)) +
 			"&limit=1",
 	})
 
@@ -757,11 +757,11 @@ func TestCursorPaginateWithNullableDescAsc(t *testing.T) {
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model3.ID)
 	assertEqual(t, models[1].ID, model2.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(models[0].SubID, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(models[1].SubID, models[1].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[1].SubID, models[1].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "https://example.com/users?a=1" +
-			"&before=" + string(utils.FormatCursorString(models[1].SubID, models[1].ID)) +
+			"&before=" + string(pbc.FormatCursorString(models[1].SubID, models[1].ID)) +
 			"&limit=2",
 	})
 
@@ -774,8 +774,8 @@ func TestCursorPaginateWithNullableDescAsc(t *testing.T) {
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model4.ID)
 	assertEqual(t, models[1].ID, model5.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(models[0].SubID, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(models[1].SubID, models[1].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[1].SubID, models[1].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "",
 	})
@@ -815,11 +815,11 @@ func TestCursorPaginateWithNullableAscDesc(t *testing.T) {
 	assertNoError(t, db.Scopes(cursor.Paginate("SubID", "ID").Order("ASC", "DESC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model5.ID)
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(models[0].SubID, models[0].ID))
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "https://example.com/users?a=1" +
-			"&after=" + string(utils.FormatCursorString(models[0].SubID, models[0].ID)) +
+			"&after=" + string(pbc.FormatCursorString(models[0].SubID, models[0].ID)) +
 			"&limit=1",
 	})
 
@@ -832,11 +832,11 @@ func TestCursorPaginateWithNullableAscDesc(t *testing.T) {
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model4.ID)
 	assertEqual(t, models[1].ID, model2.ID)
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(models[0].SubID, models[0].ID))
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(models[1].SubID, models[1].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[1].SubID, models[1].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "https://example.com/users?a=1" +
-			"&after=" + string(utils.FormatCursorString(models[1].SubID, models[1].ID)) +
+			"&after=" + string(pbc.FormatCursorString(models[1].SubID, models[1].ID)) +
 			"&limit=2",
 	})
 
@@ -849,8 +849,8 @@ func TestCursorPaginateWithNullableAscDesc(t *testing.T) {
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model3.ID)
 	assertEqual(t, models[1].ID, model1.ID)
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(models[0].SubID, models[0].ID))
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(models[1].SubID, models[1].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[1].SubID, models[1].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "",
 	})
@@ -890,11 +890,11 @@ func TestCursorPaginateReverse(t *testing.T) {
 	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID").Order("DESC", "ASC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model2.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "https://example.com/users?a=1" +
-			"&after=" + string(utils.FormatCursorString(&models[0].CreatedAt, models[0].ID)) +
+			"&after=" + string(pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID)) +
 			"&limit=1&reverse=true",
 	})
 
@@ -908,11 +908,11 @@ func TestCursorPaginateReverse(t *testing.T) {
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model1.ID)
 	assertEqual(t, models[1].ID, model3.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[1].CreatedAt, models[1].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[1].CreatedAt, models[1].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "https://example.com/users?a=1" +
-			"&after=" + string(utils.FormatCursorString(&models[1].CreatedAt, models[1].ID)) +
+			"&after=" + string(pbc.FormatCursorString(&models[1].CreatedAt, models[1].ID)) +
 			"&limit=2&reverse=true",
 	})
 
@@ -925,8 +925,8 @@ func TestCursorPaginateReverse(t *testing.T) {
 	assertNoError(t, db.Scopes(cursor.Paginate("CreatedAt", "ID").Order("DESC", "ASC").Scope()).Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model4.ID)
-	assertEqual(t, cursor.GetNextAfter(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
-	assertEqual(t, cursor.GetNextBefore(), utils.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), CursorPagingUrls{
 		Next: "",
 	})
