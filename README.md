@@ -4,24 +4,36 @@ pageboy
 [![Go Report Card](https://goreportcard.com/badge/github.com/soranoba/pageboy)](https://goreportcard.com/report/github.com/soranoba/pageboy)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/soranoba/pageboy)](https://pkg.go.dev/github.com/soranoba/pageboy)
 
-`pageboy` is a [GORM v2](https://github.com/go-gorm/gorm) pagination library.
+`pageboy` is a pagination library with [GORM v2](https://github.com/go-gorm/gorm).
 
-## Features
+## Overviews
 
-- It support before/after pagination with GORM v2
-- It support page/per pagination with GORM v2
+- 💪　Support both of before/after (Cursor) and page/per (Pager) DB pagination.
+- 🤗　Accept human readable queries.
+  - Like them: `?page=1&per_page=2` and `?before=1585706584&limit=10`
+  - We can also customize it if needed.
+- 💖　We can write smart code using GORM scopes.
+
+## Installation
+
+To install it, run:
+
+```bash
+go get -u github.com/soranoba/pageboy
+```
 
 ## Usage
 
 ### Cursor
 
-Cursor is sort using by time or number.<br>
-If you sort using CreatedAt and ID, you can prevent duplicate elements from occurring.
+Cursor can be used to indicate a range that is after or before that value.<br>
+It can sort using by time or number.<br>
+For example, when we sort using CreatedAt and ID, it can prevent duplicate values from occurring.
 
 #### Query Formats
 
-It is Unix Timestamp based, so the query can be specified by the user.
-
+- Simple numbers
+  - `https://example.com/api/users?before=1&limit=10`
 - Unix Timestamp in seconds
   - `https://example.com/api/users?before=1585706584&limit=10`
 - Unix Timestamp in milliseconds (Depends on settings on your database)
@@ -66,11 +78,11 @@ func getUsers(ctx echo.Context) error {
 
 ### Pager
 
-Pager is the most basic way to specify a page size and a page number.
+Pager can be used to indicate a range that is specified a page size and a page number.
 
 #### Query Formats
 
-Page is the 1-Based number.
+It includes a page which is 1-Based number, and per_page.
 
 - `https://example.com/users?page=1&per_page=10`
 
