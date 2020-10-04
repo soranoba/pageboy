@@ -27,7 +27,7 @@ go get -u github.com/soranoba/pageboy
 ### Cursor
 
 Cursor can be used to indicate a range that is after or before that value.<br>
-It can sort using by time or number.<br>
+It can sort using by time or integer.<br>
 For example, when we sort using CreatedAt and ID, it can prevent duplicate values from occurring.
 
 #### Query Formats
