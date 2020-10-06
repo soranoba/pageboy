@@ -2,24 +2,47 @@ package pageboy
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
 	"reflect"
 	"runtime"
 	"testing"
 
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 func openDB() *gorm.DB {
-	db, err := gorm.Open(
-		mysql.Open(
-			fmt.Sprintf(
-				"%s:%s@(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-				"pageboy", "pageboy", "127.0.0.1", 3306, "pageboy",
-			),
-		),
-		&gorm.Config{},
+	var (
+		db  *gorm.DB
+		err error
 	)
+
+	dbType, _ := os.LookupEnv("db")
+	switch dbType {
+	case "mysql":
+		db, err = gorm.Open(
+			mysql.Open(
+				fmt.Sprintf(
+					"%s:%s@(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+					"pageboy", "pageboy", "127.0.0.1", 3306, "pageboy",
+				),
+			),
+			&gorm.Config{},
+		)
+	default:
+		dir, err := ioutil.TempDir("", "pageboy_*")
+		if err != nil {
+			panic(fmt.Sprintf("failed to create tmp dir: %+v", err))
+		}
+		db, err = gorm.Open(
+			sqlite.Open(path.Join(dir, "test.db")),
+			&gorm.Config{},
+		)
+	}
+
 	if err != nil {
 		panic(fmt.Sprintf("failed to open a database: %+v", err))
 	}

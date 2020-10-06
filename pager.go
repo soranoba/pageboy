@@ -72,7 +72,7 @@ func pagerHandleBeforeQuery(db *gorm.DB) {
 	}
 
 	tx := db.Session(&gorm.Session{WithConditions: true})
-	tx.Offset(0).Limit(-1).
+	tx.Offset(-1).Limit(-1).
 		Model(db.Statement.Dest).Count(&pager.totalCount)
 }
 

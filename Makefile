@@ -3,7 +3,8 @@ build:
 	go build
 
 test:
-	go test ./... -count=1
+	DB=sqlite go test ./... -count=1
+	DB=mysql go test ./... -count=1
 
 format:
 	gofmt -w ./
