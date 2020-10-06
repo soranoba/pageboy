@@ -1,9 +1,16 @@
 version: 2.1
 
+dockerhub_auth: &dockerhub_auth
+  auth:
+    username: $DOCKERHUB_USER
+    password: $DOCKERHUB_PASSWORD
+
 default: &default
   docker:
     - image: circleci/golang:1.15
+      <<: *dockerhub_auth
     - image: circleci/mysql:8.0
+      <<: *dockerhub_auth
       environment:
         MYSQL_DATABASE: pageboy
         MYSQL_USER: pageboy
@@ -41,6 +48,10 @@ workflows:
   version: 2
   general:
     jobs:
-      - build
-      - lint
-      - test
+      - build:
+          context: org-global
+      - lint:
+          context: org-global
+      - test:
+          context: org-global
+
