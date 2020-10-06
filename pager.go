@@ -70,6 +70,9 @@ func pagerHandleBeforeQuery(db *gorm.DB) {
 	if !ok {
 		return
 	}
+	if pager.totalCount > 0 {
+		return
+	}
 
 	tx := db.Session(&gorm.Session{WithConditions: true})
 	tx.Offset(0).Limit(-1).
