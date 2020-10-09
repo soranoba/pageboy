@@ -1,4 +1,4 @@
-package pageboy
+package pageboy_test
 
 import (
 	"fmt"

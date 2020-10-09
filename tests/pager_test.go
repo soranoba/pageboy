@@ -1,4 +1,4 @@
-package pageboy
+package pageboy_test
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/soranoba/pageboy"
 	"gorm.io/gorm"
 )
 
@@ -15,13 +16,13 @@ type pagerModel struct {
 }
 
 func TestPagerValidate(t *testing.T) {
-	pager := Pager{Page: 0, PerPage: 1}
+	pager := pageboy.Pager{Page: 0, PerPage: 1}
 	assertError(t, pager.Validate())
 
-	pager = Pager{Page: 1, PerPage: 0}
+	pager = pageboy.Pager{Page: 1, PerPage: 0}
 	assertError(t, pager.Validate())
 
-	pager = Pager{Page: 1, PerPage: 1}
+	pager = pageboy.Pager{Page: 1, PerPage: 1}
 	assertNoError(t, pager.Validate())
 }
 
@@ -61,23 +62,23 @@ func TestPagerPaginate(t *testing.T) {
 	assertNoError(t, db.Create(&model4).Error)
 
 	var models []*pagerModel
-	pager := &Pager{Page: 1, PerPage: 2}
+	pager := &pageboy.Pager{Page: 1, PerPage: 2}
 	assertNoError(t, db.Scopes(pager.Scope()).Order("id ASC").Find(&models).Error)
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model1.ID)
 	assertEqual(t, models[1].ID, model2.ID)
-	assertEqual(t, *pager.Summary(), PagerSummary{Page: 1, PerPage: 2, TotalCount: 4, TotalPage: 2})
+	assertEqual(t, *pager.Summary(), pageboy.PagerSummary{Page: 1, PerPage: 2, TotalCount: 4, TotalPage: 2})
 
-	pager = &Pager{Page: 2, PerPage: 3}
+	pager = &pageboy.Pager{Page: 2, PerPage: 3}
 	assertNoError(t, db.Scopes(pager.Scope()).Order("id ASC").Find(&models).Error)
 	assertEqual(t, len(models), 1)
 	assertEqual(t, models[0].ID, model4.ID)
-	assertEqual(t, *pager.Summary(), PagerSummary{Page: 2, PerPage: 3, TotalCount: 4, TotalPage: 2})
+	assertEqual(t, *pager.Summary(), pageboy.PagerSummary{Page: 2, PerPage: 3, TotalCount: 4, TotalPage: 2})
 
-	pager = &Pager{Page: 3, PerPage: 3}
+	pager = &pageboy.Pager{Page: 3, PerPage: 3}
 	assertNoError(t, db.Scopes(pager.Scope()).Order("id ASC").Find(&models).Error)
 	assertEqual(t, len(models), 0)
-	assertEqual(t, *pager.Summary(), PagerSummary{Page: 3, PerPage: 3, TotalCount: 4, TotalPage: 2})
+	assertEqual(t, *pager.Summary(), pageboy.PagerSummary{Page: 3, PerPage: 3, TotalCount: 4, TotalPage: 2})
 }
 
 func TestPagerPaginateWithWhere(t *testing.T) {
@@ -120,12 +121,12 @@ func TestPagerPaginateWithWhere(t *testing.T) {
 	assertNoError(t, db.Create(&model4).Error)
 
 	var models []*pagerModel
-	pager := &Pager{Page: 1, PerPage: 2}
+	pager := &pageboy.Pager{Page: 1, PerPage: 2}
 	assertNoError(t, db.Scopes(pager.Scope()).Where("name = ?", "aaa").Order("id ASC").Find(&models).Error)
 	assertEqual(t, len(models), 2)
 	assertEqual(t, models[0].ID, model1.ID)
 	assertEqual(t, models[1].ID, model2.ID)
-	assertEqual(t, *pager.Summary(), PagerSummary{Page: 1, PerPage: 2, TotalCount: 2, TotalPage: 1})
+	assertEqual(t, *pager.Summary(), pageboy.PagerSummary{Page: 1, PerPage: 2, TotalCount: 2, TotalPage: 1})
 }
 
 func ExamplePager() {
@@ -144,7 +145,7 @@ func ExamplePager() {
 	db.Create(&User{Name: "Carol"})
 
 	// Default Values.
-	pager := &Pager{Page: 1, PerPage: 2}
+	pager := &pageboy.Pager{Page: 1, PerPage: 2}
 
 	// Update values from a http request.
 
