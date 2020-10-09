@@ -3,7 +3,7 @@ build:
 	go build
 
 test:
-	go test ./... -count=1
+	go test ./core/... -count=1
 	cd tests; \
 		DB=sqlite    go test ./... -count=1 && \
 		DB=mysql     go test ./... -count=1 && \
