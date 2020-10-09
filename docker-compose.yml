@@ -1,7 +1,7 @@
 version: "3.4"
 
 services:
-  db:
+  mysql:
     image: mysql:8.0
     ports:
       - "3306:3306"
@@ -12,3 +12,19 @@ services:
       MYSQL_ROOT_PASSWORD: pageboy
     volumes:
       - ./containers/mysql/conf.d:/etc/mysql/conf.d
+  postgres:
+    image: postgres:13.0
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: pageboy
+      POSTGRES_USER: pageboy
+      POSTGRES_PASSWORD: pageboy
+  sqlserver:
+    image: mcmoe/mssqldocker:v2019.CU4.0
+    ports:
+      - "1433:1433"
+    environment:
+      MSSQL_DB: pageboy
+      MSSQL_USER: pageboy
+      MSSQL_PASSWORD: pageboy

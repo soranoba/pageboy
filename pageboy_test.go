@@ -10,7 +10,9 @@ import (
 	"testing"
 
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
+	"gorm.io/driver/sqlserver"
 	"gorm.io/gorm"
 )
 
@@ -28,6 +30,26 @@ func openDB() *gorm.DB {
 				fmt.Sprintf(
 					"%s:%s@(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 					"pageboy", "pageboy", "127.0.0.1", 3306, "pageboy",
+				),
+			),
+			&gorm.Config{},
+		)
+	case "postgres":
+		db, err = gorm.Open(
+			postgres.Open(
+				fmt.Sprintf(
+					"user=%s password=%s dbname=%s host=%s port=%d sslmode=disable",
+					"pageboy", "pageboy", "pageboy", "127.0.0.1", 5432,
+				),
+			),
+			&gorm.Config{},
+		)
+	case "sqlserver":
+		db, err = gorm.Open(
+			sqlserver.Open(
+				fmt.Sprintf(
+					"sqlserver://%s:%s@%s:%d?database=%s",
+					"pageboy", "pageboy", "127.0.0.1", 1433, "pageboy",
 				),
 			),
 			&gorm.Config{},
