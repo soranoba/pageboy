@@ -47,7 +47,7 @@ You should create an index when using a Cursor.<br>
 Example using CreatedAt and ID for sorting:
 
 ```sql
-CREATE INDEX created_at_id ON `users` (`created_at` DESC, `id` DESC);
+CREATE INDEX created_at_id ON users (created_at DESC, id DESC);
 ```
 
 #### Usage in Codes

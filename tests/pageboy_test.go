@@ -22,7 +22,7 @@ func openDB() *gorm.DB {
 		err error
 	)
 
-	dbType, _ := os.LookupEnv("db")
+	dbType, _ := os.LookupEnv("DB")
 	switch dbType {
 	case "mysql":
 		db, err = gorm.Open(
@@ -44,12 +44,15 @@ func openDB() *gorm.DB {
 			),
 			&gorm.Config{},
 		)
+		// NOTE: make it behave like mysql
+		DESC = "DESC NULLS LAST"
+		ASC = "ASC NULLS FIRST"
 	case "sqlserver":
 		db, err = gorm.Open(
 			sqlserver.Open(
 				fmt.Sprintf(
 					"sqlserver://%s:%s@%s:%d?database=%s",
-					"pageboy", "pageboy", "127.0.0.1", 1433, "pageboy",
+					"SA", "hXUeLZvM4p3r2XeBG", "127.0.0.1", 1433, "master",
 				),
 			),
 			&gorm.Config{},

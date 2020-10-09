@@ -21,10 +21,9 @@ services:
       POSTGRES_USER: pageboy
       POSTGRES_PASSWORD: pageboy
   sqlserver:
-    image: mcmoe/mssqldocker:v2019.CU4.0
+    image: mcr.microsoft.com/mssql/server:2019-latest
     ports:
       - "1433:1433"
     environment:
-      MSSQL_DB: pageboy
-      MSSQL_USER: pageboy
-      MSSQL_PASSWORD: pageboy
+      ACCEPT_EULA: Y
+      SA_PASSWORD: hXUeLZvM4p3r2XeBG

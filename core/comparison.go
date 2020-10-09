@@ -59,25 +59,25 @@ func MakeComparisonScopeBuildFunc(columns ...string) func(comparisons ...Compari
 					switch comparisons[i] {
 					case LessThan:
 						if isNil {
-							eqQuery += fmt.Sprintf("`%s` IS NULL AND ", column)
+							eqQuery += fmt.Sprintf("%s IS NULL AND ", column)
 							continue Loop
 						} else {
-							query := fmt.Sprintf("(%s(`%s` IS NULL OR `%s` %s ?))", eqQuery, column, column, comparisons[i])
+							query := fmt.Sprintf("(%s(%s IS NULL OR %s %s ?))", eqQuery, column, column, comparisons[i])
 							queries = append(queries, query)
 						}
 					case GreaterThan:
 						if isNil {
-							eqQuery += fmt.Sprintf("`%s` IS NOT NULL OR ", column)
+							eqQuery += fmt.Sprintf("%s IS NOT NULL OR ", column)
 							continue Loop
 						} else {
-							query := fmt.Sprintf("(%s`%s` %s ?)", eqQuery, column, comparisons[i])
+							query := fmt.Sprintf("(%s%s %s ?)", eqQuery, column, comparisons[i])
 							queries = append(queries, query)
 						}
 					default:
 						panic("Unsupported compareStr")
 					}
 
-					eqQuery += fmt.Sprintf("`%s` = ? AND ", column)
+					eqQuery += fmt.Sprintf("%s = ? AND ", column)
 					nonNilValues = append(nonNilValues, values[i])
 					queryValues = append(queryValues, nonNilValues...)
 				}

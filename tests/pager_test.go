@@ -27,7 +27,7 @@ func TestPagerValidate(t *testing.T) {
 }
 
 func TestPagerPaginate(t *testing.T) {
-	db := openDB()
+	db := openDB().Debug()
 	assertNoError(t, db.Migrator().DropTable(&pagerModel{}))
 	assertNoError(t, db.AutoMigrate(&pagerModel{}))
 
@@ -82,7 +82,7 @@ func TestPagerPaginate(t *testing.T) {
 }
 
 func TestPagerPaginateWithWhere(t *testing.T) {
-	db := openDB().Debug()
+	db := openDB()
 	assertNoError(t, db.Migrator().DropTable(&pagerModel{}))
 	assertNoError(t, db.AutoMigrate(&pagerModel{}))
 

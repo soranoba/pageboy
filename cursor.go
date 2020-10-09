@@ -19,7 +19,7 @@ type Cursor struct {
 	Reverse bool             `json:"reverse" query:"reverse"`
 
 	// See: cursor.Order
-	orders []pbc.Order
+	orders []string
 	// See: cursor.Paginate
 	columns []string
 
@@ -103,12 +103,8 @@ func (cursor *Cursor) Paginate(columns ...string) *Cursor {
 
 // Order set the pagination orders, and returns self.
 // The orders must be same order as columns that set to arguments of Paginate.
-func (cursor *Cursor) Order(orders ...pbc.Order) *Cursor {
-	lowerOrders := make([]pbc.Order, len(orders))
-	for i := 0; i < len(orders); i++ {
-		lowerOrders[i] = pbc.Order(strings.ToLower(string(orders[i])))
-	}
-	cursor.orders = lowerOrders
+func (cursor *Cursor) Order(orders ...string) *Cursor {
+	cursor.orders = orders
 	return cursor
 }
 
@@ -119,7 +115,7 @@ func (cursor *Cursor) Scope() func(db *gorm.DB) *gorm.DB {
 
 		cursor.baseOrder = pbc.ASC
 		if len(cursor.orders) > 0 {
-			cursor.baseOrder = cursor.orders[0]
+			cursor.baseOrder = toOrder(cursor.orders[0])
 		}
 
 		db = db.InstanceSet("pageboy:cursor", cursor)
@@ -147,7 +143,7 @@ func (cursor *Cursor) comparisons(isBefore bool) []pbc.Comparison {
 	for i := 0; i < len(cursor.columns); i++ {
 		order := func() pbc.Order {
 			if i < ordersLength {
-				return cursor.orders[i]
+				return toOrder(cursor.orders[i])
 			}
 			return cursor.baseOrder
 		}()
@@ -159,6 +155,13 @@ func (cursor *Cursor) comparisons(isBefore bool) []pbc.Comparison {
 		}
 	}
 	return comparisons
+}
+
+func toOrder(str string) pbc.Order {
+	if strings.Contains(strings.ToLower(str), string(pbc.DESC)) {
+		return pbc.DESC
+	}
+	return pbc.ASC
 }
 
 func getCursor(db *gorm.DB) (*Cursor, bool) {
