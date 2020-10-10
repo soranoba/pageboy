@@ -862,6 +862,243 @@ func TestCursorPaginateWithNullableAscDesc(t *testing.T) {
 	})
 }
 
+func TestCursorPostgresWithoutNullsFirstLast(t *testing.T) {
+	db := openDB()
+	if db.Dialector.Name() != "postgres" {
+		t.Skipf("This test only runs for PostgresSQL")
+		return
+	}
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
+
+	baseURL, err := url.Parse("https://example.com/users?a=1")
+	assertNoError(t, err)
+
+	create := func(subid uint) *cursorModel {
+		var s *uint
+		if subid != 0 {
+			s = &subid
+		}
+		model := &cursorModel{
+			SubID: s,
+		}
+		assertNoError(t, db.Create(model).Error)
+		return model
+	}
+
+	model1 := create(3)
+	model2 := create(0)
+	model3 := create(2)
+	model4 := create(0)
+	model5 := create(0)
+
+	var models []*cursorModel
+	cursor := &pageboy.Cursor{
+		Limit: 1,
+	}
+	url := buildURL(cursor, *baseURL)
+	assertNoError(t, db.Scopes(cursor.Paginate("SubID", "ID").Order("DESC", "ASC").Scope()).Find(&models).Error)
+	assertEqual(t, len(models), 1)
+	assertEqual(t, models[0].ID, model2.ID)
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), pageboy.CursorPagingUrls{
+		Next: "https://example.com/users?a=1" +
+			"&before=" + string(pbc.FormatCursorString(models[0].SubID, models[0].ID)) +
+			"&limit=1",
+	})
+
+	cursor = &pageboy.Cursor{
+		Before: cursor.GetNextBefore(),
+		Limit:  2,
+	}
+	url = buildURL(cursor, *baseURL)
+	assertNoError(t, db.Scopes(cursor.Paginate("SubID", "ID").Order("DESC", "ASC").Scope()).Find(&models).Error)
+	assertEqual(t, len(models), 2)
+	assertEqual(t, models[0].ID, model4.ID)
+	assertEqual(t, models[1].ID, model5.ID)
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[1].SubID, models[1].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), pageboy.CursorPagingUrls{
+		Next: "https://example.com/users?a=1" +
+			"&before=" + string(pbc.FormatCursorString(models[1].SubID, models[1].ID)) +
+			"&limit=2",
+	})
+
+	cursor = &pageboy.Cursor{
+		Before: cursor.GetNextBefore(),
+		Limit:  2,
+	}
+	url = buildURL(cursor, *baseURL)
+	assertNoError(t, db.Scopes(cursor.Paginate("SubID", "ID").Order("DESC", "ASC").Scope()).Find(&models).Error)
+	assertEqual(t, len(models), 2)
+	assertEqual(t, models[0].ID, model1.ID)
+	assertEqual(t, models[1].ID, model3.ID)
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[1].SubID, models[1].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), pageboy.CursorPagingUrls{
+		Next: "",
+	})
+}
+
+func TestCursorPostgresWithNullsLast(t *testing.T) {
+	db := openDB()
+	if db.Dialector.Name() != "postgres" {
+		t.Skipf("This test only runs for PostgresSQL")
+		return
+	}
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
+
+	baseURL, err := url.Parse("https://example.com/users?a=1")
+	assertNoError(t, err)
+
+	create := func(subid uint) *cursorModel {
+		var s *uint
+		if subid != 0 {
+			s = &subid
+		}
+		model := &cursorModel{
+			SubID: s,
+		}
+		assertNoError(t, db.Create(model).Error)
+		return model
+	}
+
+	model1 := create(3)
+	model2 := create(0)
+	model3 := create(2)
+	model4 := create(0)
+	model5 := create(0)
+
+	var models []*cursorModel
+	cursor := &pageboy.Cursor{
+		Limit: 1,
+	}
+	url := buildURL(cursor, *baseURL)
+	assertNoError(t, db.Scopes(cursor.Paginate("SubID", "ID").Order("DESC NULLS LAST", "ASC NULLS LAST").Scope()).Find(&models).Error)
+	assertEqual(t, len(models), 1)
+	assertEqual(t, models[0].ID, model1.ID)
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), pageboy.CursorPagingUrls{
+		Next: "https://example.com/users?a=1" +
+			"&before=" + string(pbc.FormatCursorString(models[0].SubID, models[0].ID)) +
+			"&limit=1",
+	})
+
+	cursor = &pageboy.Cursor{
+		Before: cursor.GetNextBefore(),
+		Limit:  2,
+	}
+	url = buildURL(cursor, *baseURL)
+	assertNoError(t, db.Scopes(cursor.Paginate("SubID", "ID").Order("DESC NULLS LAST", "ASC NULLS LAST").Scope()).Find(&models).Error)
+	assertEqual(t, len(models), 2)
+	assertEqual(t, models[0].ID, model3.ID)
+	assertEqual(t, models[1].ID, model2.ID)
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[1].SubID, models[1].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), pageboy.CursorPagingUrls{
+		Next: "https://example.com/users?a=1" +
+			"&before=" + string(pbc.FormatCursorString(models[1].SubID, models[1].ID)) +
+			"&limit=2",
+	})
+
+	cursor = &pageboy.Cursor{
+		Before: cursor.GetNextBefore(),
+		Limit:  2,
+	}
+	url = buildURL(cursor, *baseURL)
+	assertNoError(t, db.Scopes(cursor.Paginate("SubID", "ID").Order("DESC NULLS LAST", "ASC NULLS LAST").Scope()).Find(&models).Error)
+	assertEqual(t, len(models), 2)
+	assertEqual(t, models[0].ID, model4.ID)
+	assertEqual(t, models[1].ID, model5.ID)
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[1].SubID, models[1].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), pageboy.CursorPagingUrls{
+		Next: "",
+	})
+}
+
+func TestCursorPostgresWithNullsFirst(t *testing.T) {
+	db := openDB()
+	if db.Dialector.Name() != "postgres" {
+		t.Skipf("This test only runs for PostgresSQL")
+		return
+	}
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
+
+	baseURL, err := url.Parse("https://example.com/users?a=1")
+	assertNoError(t, err)
+
+	create := func(subid uint) *cursorModel {
+		var s *uint
+		if subid != 0 {
+			s = &subid
+		}
+		model := &cursorModel{
+			SubID: s,
+		}
+		assertNoError(t, db.Create(model).Error)
+		return model
+	}
+
+	model1 := create(3)
+	model2 := create(0)
+	model3 := create(2)
+	model4 := create(0)
+	model5 := create(0)
+
+	var models []*cursorModel
+	cursor := &pageboy.Cursor{
+		Limit: 1,
+	}
+	url := buildURL(cursor, *baseURL)
+	assertNoError(t, db.Scopes(cursor.Paginate("SubID", "ID").Order("ASC NULLS FIRST", "DESC NULLS FIRST").Scope()).Find(&models).Error)
+	assertEqual(t, len(models), 1)
+	assertEqual(t, models[0].ID, model5.ID)
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), pageboy.CursorPagingUrls{
+		Next: "https://example.com/users?a=1" +
+			"&after=" + string(pbc.FormatCursorString(models[0].SubID, models[0].ID)) +
+			"&limit=1",
+	})
+
+	cursor = &pageboy.Cursor{
+		After: cursor.GetNextAfter(),
+		Limit: 2,
+	}
+	url = buildURL(cursor, *baseURL)
+	assertNoError(t, db.Scopes(cursor.Paginate("SubID", "ID").Order("ASC NULLS FIRST", "DESC NULLS FIRST").Scope()).Find(&models).Error)
+	assertEqual(t, len(models), 2)
+	assertEqual(t, models[0].ID, model4.ID)
+	assertEqual(t, models[1].ID, model2.ID)
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[1].SubID, models[1].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), pageboy.CursorPagingUrls{
+		Next: "https://example.com/users?a=1" +
+			"&after=" + string(pbc.FormatCursorString(models[1].SubID, models[1].ID)) +
+			"&limit=2",
+	})
+
+	cursor = &pageboy.Cursor{
+		After: cursor.GetNextAfter(),
+		Limit: 2,
+	}
+	url = buildURL(cursor, *baseURL)
+	assertNoError(t, db.Scopes(cursor.Paginate("SubID", "ID").Order("ASC NULLS FIRST", "DESC NULLS FIRST").Scope()).Find(&models).Error)
+	assertEqual(t, len(models), 2)
+	assertEqual(t, models[0].ID, model3.ID)
+	assertEqual(t, models[1].ID, model1.ID)
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(models[0].SubID, models[0].ID))
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(models[1].SubID, models[1].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), pageboy.CursorPagingUrls{
+		Next: "",
+	})
+}
+
 func TestCursorPaginateReverse(t *testing.T) {
 	db := openDB()
 	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
