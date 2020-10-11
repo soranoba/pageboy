@@ -16,6 +16,17 @@ default: &default
         MYSQL_USER: pageboy
         MYSQL_PASSWORD: pageboy
         MYSQL_ROOT_PASSWORD: pageboy
+    - image: postgres:13.0
+      <<: *dockerhub_auth
+      environment:
+        POSTGRES_DB: pageboy
+        POSTGRES_USER: pageboy
+        POSTGRES_PASSWORD: pageboy
+    - image: mcmoe/mssqldocker:v2019.CU4.0
+      <<: *dockerhub_auth
+      environment:
+        ACCEPT_EULA: Y
+        SA_PASSWORD: hXUeLZvM4p3r2XeBG
 
 jobs:
   build:
@@ -42,6 +53,26 @@ jobs:
               sleep 1
             done
             echo Failed waiting for MySQL && exit 1
+      - run:
+          name: Waiting for PostgresSQL to be ready
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z localhost 5432 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for PostgresSQL && exit 1
+      - run:
+          name: Waiting for SQLServer to be ready
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z localhost 1433 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for SQLServer && exit 1
       - run: make test
 
 workflows:
@@ -54,4 +85,3 @@ workflows:
           context: org-global
       - test:
           context: org-global
-
