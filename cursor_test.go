@@ -50,3 +50,11 @@ func ExampleCursor() {
 	// users[1].Name == "Alice"
 	// {"next":"https://localhost/path?after=18_1\u0026q=%E3%81%AF%E3%82%8D%E3%83%BC"}
 }
+
+func ExampleCursor_Order() {
+	cursor := &Cursor{Limit: 2, Reverse: false}
+	// For usually
+	cursor.Paginate("CreatedAt", "ID").Order("DESC", "ASC").Scope()
+	// For PostgresSQL
+	cursor.Paginate("CreatedAt", "ID").Order("DESC NULLS LAST", "ASC NULLS FIRST").Scope()
+}

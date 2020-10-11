@@ -30,7 +30,7 @@ func OrderClauseBuilder(columns ...string) func(orders ...string) string {
 	}
 }
 
-// ReverseOrders returns a slice of Order converted from ASC to DESC, DESC to ASC, FIRST tO LAST, LAST to FIRST.
+// ReverseOrders returns a slice of Order converted from ASC to DESC, DESC to ASC, FIRST to LAST, LAST to FIRST.
 func ReverseOrders(orders []string) []string {
 	replacer := strings.NewReplacer("ASC", "DESC", "DESC", "ASC", "FIRST", "LAST", "LAST", "FIRST")
 	newOrders := make([]string, len(orders))
