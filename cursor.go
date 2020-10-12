@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"strings"
 
-	pbc "github.com/soranoba/pageboy/core"
+	pbc "github.com/soranoba/pageboy/v2/core"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
