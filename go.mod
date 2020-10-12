@@ -1,4 +1,4 @@
-module github.com/soranoba/pageboy
+module github.com/soranoba/pageboy/v2
 
 go 1.15
 
