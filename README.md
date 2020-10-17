@@ -21,7 +21,7 @@ pageboy
 To install it, run:
 
 ```bash
-go get -u github.com/soranoba/pageboy
+go get -u github.com/soranoba/pageboy/v2
 ```
 
 ## Usage
