@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"strings"
 
-	pbc "github.com/soranoba/pageboy/core"
+	pbc "github.com/soranoba/pageboy/v2/core"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -19,7 +19,9 @@ type Cursor struct {
 	Reverse bool             `json:"reverse" query:"reverse"`
 
 	// See: cursor.Order
-	orders []pbc.Order
+	rawOrders   []string
+	orders      []pbc.Order
+	nullsOrders []pbc.NullsOrder
 	// See: cursor.Paginate
 	columns []string
 
@@ -103,12 +105,37 @@ func (cursor *Cursor) Paginate(columns ...string) *Cursor {
 
 // Order set the pagination orders, and returns self.
 // The orders must be same order as columns that set to arguments of Paginate.
-func (cursor *Cursor) Order(orders ...pbc.Order) *Cursor {
-	lowerOrders := make([]pbc.Order, len(orders))
-	for i := 0; i < len(orders); i++ {
-		lowerOrders[i] = pbc.Order(strings.ToLower(string(orders[i])))
+func (cursor *Cursor) Order(orders ...string) *Cursor {
+	pbcOrders := make([]pbc.Order, len(orders))
+	nullsOrders := make([]pbc.NullsOrder, len(orders))
+	for i, rawOrder := range orders {
+		lowerRawOrder := strings.ToLower(rawOrder)
+		pbcOrders[i] = func() pbc.Order {
+			if strings.Contains(lowerRawOrder, string(pbc.DESC)) {
+				return pbc.DESC
+			}
+			return pbc.ASC
+		}()
+		nullsOrders[i] = func() pbc.NullsOrder {
+			if strings.Contains(lowerRawOrder, "first") {
+				if pbcOrders[i] == pbc.ASC {
+					return pbc.TreatsAsLowest
+				}
+				return pbc.TreatsAsHighest
+			} else if strings.Contains(lowerRawOrder, "last") {
+				if pbcOrders[i] == pbc.ASC {
+					return pbc.TreatsAsHighest
+				}
+				return pbc.TreatsAsLowest
+			}
+			return pbc.TreatsAsEngineDefault
+		}()
 	}
-	cursor.orders = lowerOrders
+
+	cursor.rawOrders = orders
+	cursor.orders = pbcOrders
+	cursor.nullsOrders = nullsOrders
+
 	return cursor
 }
 
@@ -125,9 +152,9 @@ func (cursor *Cursor) Scope() func(db *gorm.DB) *gorm.DB {
 		db = db.InstanceSet("pageboy:cursor", cursor)
 
 		if cursor.Reverse {
-			db = db.Order(pbc.OrderClauseBuilder(cursor.columns...)(pbc.ReverseOrders(cursor.orders)...))
+			db = db.Order(pbc.OrderClauseBuilder(cursor.columns...)(pbc.ReverseOrders(cursor.rawOrders)...))
 		} else {
-			db = db.Order(pbc.OrderClauseBuilder(cursor.columns...)(cursor.orders...))
+			db = db.Order(pbc.OrderClauseBuilder(cursor.columns...)(cursor.rawOrders...))
 		}
 		return db.Limit(cursor.Limit)
 	}
@@ -188,13 +215,13 @@ func cursorHandleBeforeQuery(db *gorm.DB) {
 	if cursor.Before != "" {
 		segments := pbc.NewCursorSegments(cursor.Before)
 		args := segments.Interface(ty, cursor.columns...)
-		db = db.Scopes(pbc.MakeComparisonScopeBuildFunc(cursor.columns...)(cursor.comparisons(true)...)(args...))
+		db = db.Scopes(pbc.MakeComparisonScope(cursor.columns, cursor.comparisons(true), cursor.nullsOrders, args))
 	}
 
 	if cursor.After != "" {
 		segments := pbc.NewCursorSegments(cursor.After)
 		args := segments.Interface(ty, cursor.columns...)
-		db = db.Scopes(pbc.MakeComparisonScopeBuildFunc(cursor.columns...)(cursor.comparisons(false)...)(args...))
+		db = db.Scopes(pbc.MakeComparisonScope(cursor.columns, cursor.comparisons(false), cursor.nullsOrders, args))
 	}
 
 	limit, ok := db.Statement.Clauses[new(clause.Limit).Name()]

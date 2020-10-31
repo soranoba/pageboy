@@ -13,13 +13,15 @@ pageboy
   - Like them: `?page=1&per_page=2` and `?before=1585706584&limit=10`
   - We can also customize it if needed.
 - 💖　We can write smart code using GORM scopes.
+- 👌　Supports all DB engine officialy supported by GORM.
+  - MySQL, PostgreSQL, SQLite, SQL Server
 
 ## Installation
 
 To install it, run:
 
 ```bash
-go get -u github.com/soranoba/pageboy
+go get -u github.com/soranoba/pageboy/v2
 ```
 
 ## Usage
@@ -47,7 +49,7 @@ You should create an index when using a Cursor.<br>
 Example using CreatedAt and ID for sorting:
 
 ```sql
-CREATE INDEX created_at_id ON `users` (`created_at` DESC, `id` DESC);
+CREATE INDEX created_at_id ON users (created_at DESC, id DESC);
 ```
 
 #### Usage in Codes
@@ -74,6 +76,17 @@ func getUsers(ctx echo.Context) error {
 		return err
 	}
 }
+```
+
+#### NULLS FIRST / NULLS LAST
+
+PostgresSQL can accept NULLS FIRST or NULLS LAST for index.<br>
+In that case, it can use the index by adding NULLS FIRST or NULLS LAST in Order.
+
+It is not supported other engines because they cannot accept these for index.
+
+```go
+cursor.Paginate("CreatedAt", "UpdatedAt").Order("DESC NULLS LAST", "ASC NULLS FIRST").Scope()
 ```
 
 ### Pager

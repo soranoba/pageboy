@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // Pager is a builder that build a GORM scope that specifies a range of records.
@@ -75,8 +76,19 @@ func pagerHandleBeforeQuery(db *gorm.DB) {
 	}
 
 	tx := db.Session(&gorm.Session{WithConditions: true})
-	tx.Offset(-1).Limit(-1).
-		Model(db.Statement.Dest).Count(&pager.totalCount)
+	clauses := tx.Statement.Clauses
+	newClauses := make(map[string]clause.Clause)
+	orderKey := (&clause.OrderBy{}).Name()
+	limitKey := (&clause.Limit{}).Name()
+	for k, v := range clauses {
+		if k != orderKey && k != limitKey {
+			newClauses[k] = v
+		}
+	}
+	tx.Statement.Clauses = newClauses
+	tx.Model(db.Statement.Dest).Count(&pager.totalCount)
+
+	tx.Statement.Clauses = clauses
 }
 
 func registerPagerCallbacks(db *gorm.DB) {
