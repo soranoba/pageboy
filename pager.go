@@ -75,7 +75,7 @@ func pagerHandleBeforeQuery(db *gorm.DB) {
 		return
 	}
 
-	tx := db.Session(&gorm.Session{WithConditions: true})
+	tx := db.Session(&gorm.Session{})
 	clauses := tx.Statement.Clauses
 	newClauses := make(map[string]clause.Clause)
 	orderKey := (&clause.OrderBy{}).Name()
