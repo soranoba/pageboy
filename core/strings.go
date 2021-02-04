@@ -13,6 +13,8 @@ func toSnake(str string) string {
 				i++
 			}
 			p = i
+		} else if !(c >= 'a' && c <= 'z') {
+			p = i
 		}
 	}
 	return string(runes)

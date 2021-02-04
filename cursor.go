@@ -1,6 +1,7 @@
 package pageboy
 
 import (
+	"bytes"
 	"net/url"
 	"reflect"
 	"strings"
@@ -150,12 +151,6 @@ func (cursor *Cursor) Scope() func(db *gorm.DB) *gorm.DB {
 		}
 
 		db = db.InstanceSet("pageboy:cursor", cursor)
-
-		if cursor.Reverse {
-			db = db.Order(pbc.OrderClauseBuilder(cursor.columns...)(pbc.ReverseOrders(cursor.rawOrders)...))
-		} else {
-			db = db.Order(pbc.OrderClauseBuilder(cursor.columns...)(cursor.rawOrders...))
-		}
 		return db.Limit(cursor.Limit)
 	}
 }
@@ -212,16 +207,30 @@ func cursorHandleBeforeQuery(db *gorm.DB) {
 		ty = ty.Elem()
 	}
 
+	table := db.Statement.Table
+	columns := make([]string, len(cursor.columns))
+	for i, column := range cursor.columns {
+		buf := bytes.NewBuffer([]byte{})
+		db.Dialector.QuoteTo(buf, table+"."+column)
+		columns[i] = buf.String()
+	}
+
 	if cursor.Before != "" {
 		segments := pbc.NewCursorSegments(cursor.Before)
 		args := segments.Interface(ty, cursor.columns...)
-		db = db.Scopes(pbc.MakeComparisonScope(cursor.columns, cursor.comparisons(true), cursor.nullsOrders, args))
+		db = db.Scopes(pbc.MakeComparisonScope(columns, cursor.comparisons(true), cursor.nullsOrders, args))
 	}
 
 	if cursor.After != "" {
 		segments := pbc.NewCursorSegments(cursor.After)
 		args := segments.Interface(ty, cursor.columns...)
-		db = db.Scopes(pbc.MakeComparisonScope(cursor.columns, cursor.comparisons(false), cursor.nullsOrders, args))
+		db = db.Scopes(pbc.MakeComparisonScope(columns, cursor.comparisons(false), cursor.nullsOrders, args))
+	}
+
+	if cursor.Reverse {
+		db = db.Order(pbc.OrderClauseBuilder(columns...)(pbc.ReverseOrders(cursor.rawOrders)...))
+	} else {
+		db = db.Order(pbc.OrderClauseBuilder(columns...)(cursor.rawOrders...))
 	}
 
 	limit, ok := db.Statement.Clauses[new(clause.Limit).Name()]
