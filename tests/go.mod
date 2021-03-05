@@ -8,7 +8,7 @@ require (
 	gorm.io/driver/postgres v1.0.2
 	gorm.io/driver/sqlite v1.1.3
 	gorm.io/driver/sqlserver v1.0.4
-	gorm.io/gorm v1.20.8
+	gorm.io/gorm v1.21.2
 )
 
 replace github.com/soranoba/pageboy/v2 => ../

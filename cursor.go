@@ -218,13 +218,13 @@ func cursorHandleBeforeQuery(db *gorm.DB) {
 	if cursor.Before != "" {
 		segments := pbc.NewCursorSegments(cursor.Before)
 		args := segments.Interface(ty, cursor.columns...)
-		db = db.Scopes(pbc.MakeComparisonScope(columns, cursor.comparisons(true), cursor.nullsOrders, args))
+		db = pbc.MakeComparisonScope(columns, cursor.comparisons(true), cursor.nullsOrders, args)(db)
 	}
 
 	if cursor.After != "" {
 		segments := pbc.NewCursorSegments(cursor.After)
 		args := segments.Interface(ty, cursor.columns...)
-		db = db.Scopes(pbc.MakeComparisonScope(columns, cursor.comparisons(false), cursor.nullsOrders, args))
+		db = pbc.MakeComparisonScope(columns, cursor.comparisons(false), cursor.nullsOrders, args)(db)
 	}
 
 	if cursor.Reverse {
