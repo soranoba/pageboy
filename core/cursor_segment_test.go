@@ -17,11 +17,15 @@ func TestNewCursorSegments(t *testing.T) {
 	assertEqual(t, len(ga), 1)
 	assertEqual(t, ga[0].Time().UnixNano(), ti.UnixNano())
 
-	ga = NewCursorSegments("1585706584.025_20")
-	assertEqual(t, len(ga), 2)
+	ga = NewCursorSegments("1585706584.025_20_0")
+	assertEqual(t, len(ga), 3)
 	assertEqual(t, ga[0].Time().UnixNano(), ti.UnixNano())
 	assertEqual(t, ga[1].Int64(), int64(20))
 	assertEqual(t, *ga[1].Int64Ptr(), int64(20))
+	assertEqual(t, ga[1].Bool(), true)
+	assertEqual(t, *ga[1].BoolPtr(), true)
+	assertEqual(t, ga[2].Bool(), false)
+	assertEqual(t, *ga[2].BoolPtr(), false)
 
 	ti, err = time.Parse(format, "2020-04-01T02:03:04")
 	if err != nil {

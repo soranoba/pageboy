@@ -35,6 +35,8 @@ func FormatCursorString(args ...interface{}) CursorString {
 	var str string
 
 	// args
+	var b bool
+	bt := reflect.TypeOf(b)
 	var i64 int64
 	i64t := reflect.TypeOf(i64)
 	var ui64 uint64
@@ -57,7 +59,13 @@ func FormatCursorString(args ...interface{}) CursorString {
 			}
 
 			v = reflect.Indirect(v)
-			if v.Type().ConvertibleTo(i64t) {
+			if v.Type().ConvertibleTo(bt) {
+				if v.Convert(bt).Interface().(bool) {
+					return "1"
+				} else {
+					return "0"
+				}
+			} else if v.Type().ConvertibleTo(i64t) {
 				return strconv.FormatInt(v.Convert(i64t).Interface().(int64), 10)
 			} else if v.Type().ConvertibleTo(ui64t) {
 				return strconv.FormatUint(v.Convert(ui64t).Interface().(uint64), 10)
