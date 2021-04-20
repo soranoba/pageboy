@@ -33,6 +33,23 @@ func (seg CursorSegment) Int64Ptr() *int64 {
 	return &i
 }
 
+// Bool returns converted to bool.
+func (seg CursorSegment) Bool() bool {
+	if seg.integer > 0 {
+		return true
+	}
+	return false
+}
+
+// BoolPtr returns converted to pointer of bool.
+func (seg CursorSegment) BoolPtr() *bool {
+	if seg.isNil {
+		return nil
+	}
+	b := seg.Bool()
+	return &b
+}
+
 // Time returns converted to time.
 func (seg CursorSegment) Time() *time.Time {
 	if seg.isNil {
@@ -58,10 +75,17 @@ func (seg CursorSegment) Interface(ty reflect.Type, column string) interface{} {
 		return seg.Time()
 	}
 
-	if field.Type.Kind() == reflect.Ptr {
+	switch field.Type.Kind() {
+	case reflect.Ptr:
+		if field.Type.Elem().Kind() == reflect.Bool {
+			return seg.BoolPtr()
+		}
 		return seg.Int64Ptr()
+	case reflect.Bool:
+		return seg.Bool()
+	default:
+		return seg.Int64()
 	}
-	return seg.Int64()
 }
 
 // CursorSegments is slice of CursorSegment.

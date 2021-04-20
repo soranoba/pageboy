@@ -19,6 +19,7 @@ type cursorModel struct {
 	SubID *uint
 	Name  string
 	Time  *time.Time
+	Flag  bool
 }
 
 type childModel struct {
@@ -1175,6 +1176,75 @@ func TestCursorPaginateReverse(t *testing.T) {
 	assertEqual(t, models[0].ID, model4.ID)
 	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
 	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].CreatedAt, models[0].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), pageboy.CursorPagingUrls{
+		Next: "",
+	})
+}
+
+func TestCursor_bool(t *testing.T) {
+	db := openDB()
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
+
+	baseURL, err := url.Parse("https://example.com/users?a=1")
+	assertNoError(t, err)
+
+	create := func(flag bool) *cursorModel {
+		model := &cursorModel{
+			Flag: flag,
+		}
+		assertNoError(t, db.Create(model).Error)
+		return model
+	}
+
+	model1 := create(false)
+	model2 := create(true)
+	model3 := create(false)
+	model4 := create(true)
+
+	var models []*cursorModel
+	cursor := &pageboy.Cursor{
+		Limit: 1,
+	}
+	url := buildURL(cursor, *baseURL)
+	assertNoError(t, db.Scopes(cursor.Paginate("Flag", "ID").Order(DESC, DESC).Scope()).Find(&models).Error)
+	assertEqual(t, len(models), 1)
+	assertEqual(t, models[0].ID, model4.ID)
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].Flag, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].Flag, models[0].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), pageboy.CursorPagingUrls{
+		Next: string("https://example.com/users?a=1" +
+			"&before=" + pbc.FormatCursorString(&models[0].Flag, models[0].ID) +
+			"&limit=1"),
+	})
+
+	cursor = &pageboy.Cursor{
+		Before: cursor.GetNextBefore(),
+		Limit:  2,
+	}
+	url = buildURL(cursor, *baseURL)
+	assertNoError(t, db.Scopes(cursor.Paginate("Flag", "ID").Order(DESC, DESC).Scope()).Find(&models).Error)
+	assertEqual(t, len(models), 2)
+	assertEqual(t, models[0].ID, model2.ID)
+	assertEqual(t, models[1].ID, model3.ID)
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].Flag, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[1].Flag, models[1].ID))
+	assertEqual(t, *cursor.BuildNextPagingUrls(url), pageboy.CursorPagingUrls{
+		Next: "https://example.com/users?a=1" +
+			"&before=" + string(pbc.FormatCursorString(&models[1].Flag, models[1].ID)) +
+			"&limit=2",
+	})
+
+	cursor = &pageboy.Cursor{
+		Before: cursor.GetNextBefore(),
+		Limit:  2,
+	}
+	url = buildURL(cursor, *baseURL)
+	assertNoError(t, db.Scopes(cursor.Paginate("Flag", "ID").Order(DESC, DESC).Scope()).Find(&models).Error)
+	assertEqual(t, len(models), 1)
+	assertEqual(t, models[0].ID, model1.ID)
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&models[0].Flag, models[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&models[0].Flag, models[0].ID))
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), pageboy.CursorPagingUrls{
 		Next: "",
 	})

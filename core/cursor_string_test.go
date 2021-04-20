@@ -7,6 +7,7 @@ import (
 )
 
 func TestFormatCursorString(t *testing.T) {
+	var flag bool = true
 	var id1 uint = 20
 	var id2 int = 10
 
@@ -18,7 +19,7 @@ func TestFormatCursorString(t *testing.T) {
 	assertEqual(t, FormatCursorString(&ti), CursorString("1585706584.025"))
 	assertEqual(t, FormatCursorString(&ti, id1), CursorString("1585706584.025_20"))
 	assertEqual(t, FormatCursorString(&ti, &id1), CursorString("1585706584.025_20"))
-	assertEqual(t, FormatCursorString(&ti, id1, id2), CursorString("1585706584.025_20_10"))
+	assertEqual(t, FormatCursorString(&ti, id1, id2, flag, &flag), CursorString("1585706584.025_20_10_1_1"))
 
 	ti, err = time.Parse(format, "2020-04-01T02:03:04")
 	if err != nil {
