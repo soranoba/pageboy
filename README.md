@@ -124,3 +124,8 @@ func getUsers(ctx echo.Context) error {
 	}
 }
 ```
+
+### Attentions
+
+This library is only available for the kind of functions that the [Query callback](https://pkg.go.dev/gorm.io/gorm@v1.21.8/callbacks#Query) is executed on.<br>
+That is, it cannot be used with [Row](https://pkg.go.dev/gorm.io/gorm@v1.21.8#DB.Row) or [Scan](https://pkg.go.dev/gorm.io/gorm@v1.21.8#DB.Scan) <br>

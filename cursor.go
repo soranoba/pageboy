@@ -322,7 +322,9 @@ func getCursorStringFromColumns(value reflect.Value, columns ...string) pbc.Curs
 	args := make([]interface{}, len(columns))
 	for i, column := range columns {
 		argValue := value.FieldByName(column)
-		if argValue.CanInterface() {
+		if !argValue.IsValid() {
+			panic("`" + column + "` field is not exist in " + value.Type().Name() + ".")
+		} else if argValue.CanInterface() {
 			args[i] = argValue.Interface()
 		} else {
 			args[i] = nil
