@@ -3,6 +3,7 @@ package pageboy_test
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -127,6 +128,33 @@ func TestPagerPaginateWithWhere(t *testing.T) {
 	assertEqual(t, models[0].ID, model1.ID)
 	assertEqual(t, models[1].ID, model2.ID)
 	assertEqual(t, *pager.Summary(), pageboy.PagerSummary{Page: 1, PerPage: 2, TotalCount: 2, TotalPage: 1})
+}
+
+func TestPager_concurrency(t *testing.T) {
+	db := openDB()
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
+
+	assertNoError(t, db.Create(&cursorModel{}).Error)
+	assertNoError(t, db.Create(&cursorModel{}).Error)
+	assertNoError(t, db.Create(&cursorModel{}).Error)
+	assertNoError(t, db.Create(&cursorModel{}).Error)
+	assertNoError(t, db.Create(&cursorModel{}).Error)
+
+	wg := &sync.WaitGroup{}
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func() {
+			pager := &pageboy.Pager{
+				Page:    1,
+				PerPage: 10,
+			}
+			var models []cursorModel
+			assertNoError(t, db.Session(&gorm.Session{}).Scopes(pager.Scope()).Find(&models).Error)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 }
 
 func ExamplePager() {
