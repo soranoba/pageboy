@@ -9,6 +9,8 @@ import (
 
 func ExamplePager() {
 	db := openDB()
+	// Please execute it only once immediately after opening DB.
+	RegisterCallbacks(db)
 
 	type User struct {
 		gorm.Model

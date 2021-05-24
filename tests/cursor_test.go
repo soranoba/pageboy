@@ -6,11 +6,12 @@ import (
 	"math/rand"
 	"net/url"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
-	"github.com/soranoba/pageboy/v2"
-	pbc "github.com/soranoba/pageboy/v2/core"
+	"github.com/soranoba/pageboy/v3"
+	pbc "github.com/soranoba/pageboy/v3/core"
 	"gorm.io/gorm"
 )
 
@@ -1331,6 +1332,32 @@ func TestCursor_where_clause_is_ambiguous(t *testing.T) {
 	assertEqual(t, *cursor.BuildNextPagingUrls(url), pageboy.CursorPagingUrls{
 		Next: "",
 	})
+}
+
+func TestCursor_concurrency(t *testing.T) {
+	db := openDB()
+	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))
+	assertNoError(t, db.AutoMigrate(&cursorModel{}))
+
+	assertNoError(t, db.Create(&cursorModel{}).Error)
+	assertNoError(t, db.Create(&cursorModel{}).Error)
+	assertNoError(t, db.Create(&cursorModel{}).Error)
+	assertNoError(t, db.Create(&cursorModel{}).Error)
+	assertNoError(t, db.Create(&cursorModel{}).Error)
+
+	wg := &sync.WaitGroup{}
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func() {
+			cursor := &pageboy.Cursor{
+				Limit: 10,
+			}
+			var models []cursorModel
+			assertNoError(t, db.Session(&gorm.Session{}).Scopes(cursor.Paginate("CreatedAt", "ID").Order(ASC, ASC).Scope()).Find(&models).Error)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 }
 
 func ExampleCursor() {
