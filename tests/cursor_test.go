@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/soranoba/pageboy/v2"
-	pbc "github.com/soranoba/pageboy/v2/core"
+	"github.com/soranoba/pageboy/v3"
+	pbc "github.com/soranoba/pageboy/v3/core"
 	"gorm.io/gorm"
 )
 
