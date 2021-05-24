@@ -143,8 +143,6 @@ func (cursor *Cursor) Order(orders ...string) *Cursor {
 // Scope returns a GORM scope.
 func (cursor *Cursor) Scope() func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
-		registerCursorCallbacks(db)
-
 		cursor.baseOrder = pbc.ASC
 		if len(cursor.orders) > 0 {
 			cursor.baseOrder = cursor.orders[0]

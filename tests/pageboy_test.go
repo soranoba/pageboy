@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/soranoba/pageboy/v2"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
@@ -68,6 +69,7 @@ func openDB() *gorm.DB {
 		)
 	}
 
+	pageboy.RegisterCallbacks(db)
 	if err != nil {
 		panic(fmt.Sprintf("failed to open a database: %+v", err))
 	}

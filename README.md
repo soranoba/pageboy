@@ -55,6 +55,12 @@ CREATE INDEX created_at_id ON users (created_at DESC, id DESC);
 #### Usage in Codes
 
 ```go
+db, _ := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+// Please execute it only once immediately after opening DB.
+pageboy.RegisterCallbacks(db)
+```
+
+```go
 type UsersRequest struct {
 	pageboy.Cursor
 }
@@ -100,6 +106,12 @@ It includes a page which is 1-Based number, and per_page.
 - `https://example.com/users?page=1&per_page=10`
 
 #### Usage in Codes
+
+```go
+db, _ := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+// Please execute it only once immediately after opening DB.
+pageboy.RegisterCallbacks(db)
+```
 
 ```go
 type UsersRequest struct {

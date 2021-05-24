@@ -56,7 +56,6 @@ func (pager *Pager) Validate() error {
 // Scope returns a GORM scope.
 func (pager *Pager) Scope() func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
-		registerPagerCallbacks(db)
 		db = db.InstanceSet("pageboy:pager", pager)
 		return db.Offset((pager.Page - 1) * pager.PerPage).Limit(pager.PerPage)
 	}
