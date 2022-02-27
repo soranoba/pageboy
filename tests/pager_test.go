@@ -130,6 +130,33 @@ func TestPagerPaginateWithWhere(t *testing.T) {
 	assertEqual(t, *pager.Summary(), pageboy.PagerSummary{Page: 1, PerPage: 2, TotalCount: 2, TotalPage: 1})
 }
 
+func TestPager_preload(t *testing.T) {
+	db := openDB()
+
+	assertNoError(t, db.Migrator().DropTable(&User{}))
+	assertNoError(t, db.Migrator().DropTable(&Group{}))
+	assertNoError(t, db.AutoMigrate(&Group{}))
+	assertNoError(t, db.AutoMigrate(&User{}))
+
+	assertNoError(
+		t,
+		db.Create(&User{
+			Name: "Alice",
+			Groups: []Group{
+				{Name: "A"},
+				{Name: "B"},
+			},
+		}).Error,
+	)
+
+	var users []*User
+	pager := &pageboy.Pager{Page: 1, PerPage: 2}
+	assertNoError(t, db.Preload("Groups").Scopes(pager.Scope()).Order("id ASC").Find(&users).Error)
+	assertEqual(t, len(users), 1)
+	assertEqual(t, len(users[0].Groups), 2)
+	assertEqual(t, *pager.Summary(), pageboy.PagerSummary{Page: 1, PerPage: 2, TotalCount: 1, TotalPage: 1})
+}
+
 func TestPager_concurrency(t *testing.T) {
 	db := openDB()
 	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))

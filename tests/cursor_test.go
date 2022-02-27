@@ -1334,6 +1334,37 @@ func TestCursor_where_clause_is_ambiguous(t *testing.T) {
 	})
 }
 
+func TestCursor_preload(t *testing.T) {
+	db := openDB()
+
+	assertNoError(t, db.Migrator().DropTable(&User{}))
+	assertNoError(t, db.Migrator().DropTable(&Group{}))
+	assertNoError(t, db.AutoMigrate(&Group{}))
+	assertNoError(t, db.AutoMigrate(&User{}))
+
+	assertNoError(
+		t,
+		db.Create(&User{
+			Name: "Alice",
+			Groups: []Group{
+				{Name: "A"},
+				{Name: "B"},
+			},
+		}).Error,
+	)
+
+	var users []*User
+	cursor := &pageboy.Cursor{
+		Limit: 2,
+	}
+
+	assertNoError(t, db.Preload("Groups").Scopes(cursor.Paginate("ID").Order(ASC).Scope()).Find(&users).Error)
+	assertEqual(t, len(users), 1)
+	assertEqual(t, len(users[0].Groups), 2)
+	assertEqual(t, cursor.GetNextAfter(), pbc.FormatCursorString(&users[0].ID))
+	assertEqual(t, cursor.GetNextBefore(), pbc.FormatCursorString(&users[0].ID))
+}
+
 func TestCursor_concurrency(t *testing.T) {
 	db := openDB()
 	assertNoError(t, db.Migrator().DropTable(&cursorModel{}))

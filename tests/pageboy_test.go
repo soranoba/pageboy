@@ -17,6 +17,18 @@ import (
 	"gorm.io/gorm"
 )
 
+type Group struct {
+	ID     uint `gorm:"primarykey"`
+	Name   string
+	UserID uint
+}
+
+type User struct {
+	ID     uint `gorm:"primarykey"`
+	Name   string
+	Groups []Group
+}
+
 func openDB() *gorm.DB {
 	var (
 		db  *gorm.DB
