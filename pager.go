@@ -90,9 +90,7 @@ func pagerHandleBeforeQuery(db *gorm.DB) {
 	preloads := tx.Statement.Preloads
 	tx.Statement.Preloads = map[string][]interface{}{}
 
-	if err := tx.Model(db.Statement.Dest).Count(&pager.totalCount).Error; err != nil {
-		panic(err)
-	}
+	tx.Model(db.Statement.Dest).Count(&pager.totalCount)
 
 	tx.Statement.Preloads = preloads
 	tx.Statement.Clauses = clauses
