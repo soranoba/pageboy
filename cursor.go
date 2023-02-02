@@ -232,8 +232,8 @@ func cursorHandleBeforeQuery(db *gorm.DB) {
 	}
 
 	limit, ok := db.Statement.Clauses[new(clause.Limit).Name()]
-	if ok {
-		cursor.limit = limit.Expression.(clause.Limit).Limit
+	if ok && limit.Expression.(clause.Limit).Limit != nil {
+		cursor.limit = *limit.Expression.(clause.Limit).Limit
 		db.Limit(cursor.limit + 1)
 	} else {
 		cursor.limit = -1

@@ -7,7 +7,7 @@ dockerhub_auth: &dockerhub_auth
 
 default: &default
   docker:
-    - image: circleci/golang:1.15
+    - image: cimg/go:1.19
       <<: *dockerhub_auth
     - image: circleci/mysql:8.0
       <<: *dockerhub_auth

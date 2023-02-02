@@ -1,10 +1,9 @@
 // Package pageboy is a pagination library with GORM.
 //
-// Links
+// # Links
 //
 // GORM: https://github.com/go-gorm/gorm
 // Source code: https://github.com/soranoba/pageboy
-//
 package pageboy
 
 import "gorm.io/gorm"
