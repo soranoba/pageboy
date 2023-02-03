@@ -3,7 +3,7 @@ module github.com/soranoba/pageboy/tests
 go 1.19
 
 require (
-	github.com/soranoba/pageboy/v3 v3.0.0
+	github.com/soranoba/pageboy/v4 v4.0.0
 	gorm.io/driver/mysql v1.3.2
 	gorm.io/driver/postgres v1.3.1
 	gorm.io/driver/sqlite v1.4.4
@@ -31,4 +31,4 @@ require (
 	golang.org/x/text v0.5.0 // indirect
 )
 
-replace github.com/soranoba/pageboy/v3 => ../
+replace github.com/soranoba/pageboy/v4 => ../

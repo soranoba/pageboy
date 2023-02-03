@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/soranoba/pageboy/v3"
+	"github.com/soranoba/pageboy/v4"
 	"gorm.io/gorm"
 )
 

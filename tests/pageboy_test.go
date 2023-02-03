@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/soranoba/pageboy/v3"
+	"github.com/soranoba/pageboy/v4"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
