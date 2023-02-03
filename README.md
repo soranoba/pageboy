@@ -2,7 +2,7 @@ pageboy
 ==========
 [![CircleCI](https://circleci.com/gh/soranoba/pageboy.svg?style=svg&circle-token=977b6c270d30867fe12a0e65d34f8adbb3d7d7f2)](https://circleci.com/gh/soranoba/pageboy)
 [![Go Report Card](https://goreportcard.com/badge/github.com/soranoba/pageboy)](https://goreportcard.com/report/github.com/soranoba/pageboy)
-[![PkgGoDev](https://pkg.go.dev/badge/github.com/soranoba/pageboy/v3)](https://pkg.go.dev/github.com/soranoba/pageboy/v3)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/soranoba/pageboy/v4](https://pkg.go.dev/github.com/soranoba/pageboy/v4)
 
 `pageboy` is a pagination library with [GORM v2](https://github.com/go-gorm/gorm).
 
@@ -21,7 +21,7 @@ pageboy
 To install it, run:
 
 ```bash
-go get -u github.com/soranoba/pageboy/v3
+go get -u github.com/soranoba/pageboy/v4
 ```
 
 ## Usage

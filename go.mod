@@ -1,4 +1,4 @@
-module github.com/soranoba/pageboy/v3
+module github.com/soranoba/pageboy/v4
 
 go 1.19
 
